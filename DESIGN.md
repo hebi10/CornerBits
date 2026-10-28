@@ -1,22 +1,22 @@
-# CornerBits interface
+# Coastal life · A concept
 
-Approved latest brief: minimal transparent Windows desktop game that resembles a small pixel ornament at a glance. On2026-10-28 the user explicitly approved a fishing-first redesign with persistent collected fish, effective equipment upgrades and changing regional scenery. Preserve existing progress, keep monochrome retro pixels, and simplify the shared shell, garden, sword and management presentation. Garden/sword game rules remain unchanged.
+The latest approved world is a colored pixel coastal place. This replaces the rejected monochrome three-game presentation; its implementation remains in Git and the legacy entry for data safety.
 
-- Three picture-selectable games plus a keepsake management view, a draggable compact title area, shared save status and backup actions. Art leads in resting views with minimal text; exact controls and statistics appear in tooltips and explicit tools. Quiet successful-save presentation must not hide saving, errors, retries or recovery notices.
-- Background #f5f5f3, surface #ffffff, text #252525, muted text #595959, border #bdbdb8.
-- Gulim/GulimChe-first Korean stack with system fallback; body12–13px, heading18px, weight500, emphasis at most700. Do not download another font.
-- Text buttons have no fill or border. Picture controls keep their existing forms. No box shadows, one-sided accent borders, or hover animation. Text directly over wallpaper uses a thin light outline for legibility.
-- Keyboard focus uses a visible two-pixel outline. Status and errors use words rather than color alone.
-- Confirmation for restoring a backup is inline and explains replacement and the recovery snapshot.
-- Browser preview is explicitly labeled; desktop files never silently fall back to browser storage.
-- The user selected a desktop widget rather than an independent app window. Hide standard minimize/taskbar affordances, keep compact/close and tray recovery, and place behind other applications.
-- Expanded views and the compact bar have no large background or outline: small sprites and essential text sit over wallpaper. Keep navigation, title/drag affordance and tools subordinate to the central scene. Management uses a smaller pixel archive box with export/import icons. Save status, captions and footer stay transparent with thin light text outlines. Keyboard focus keeps an unfilled outline. Help/errors/restore confirmation remain readable; text buttons stay transparent.
-- New generated pixel PNG atlases provide fish/aquarium/fishing tools, ten weapons/smith tools, plants and utility icons. All lack faces/smiles and use sharp pixel clusters. CSS image-rendering:pixelated with grayscale(1) preserves alpha and a limited neutral palette. Prompts stay embedded and in manifests; older illustration assets remain preserved.
-- Fishing presents one connected minimal pixel angler in a boat using `public/art/minimal-angler-scenes.png` (2×2 idle/waiting/bite/catch). `minimal-fishing-regions.png` is3×3 with its first six cells showing distinct sparse landscapes; these are transparent cutouts rather than rectangular water/sky panels. `minimal-fish-collection.png` is6×6 with36 dedicated species silhouettes. `minimal-fishing-gear.png` is4×4 with its first eight cells showing the equipment stages. Preserve each generated alpha, source and exact prompt metadata. Older assets remain preserved.
-- The fishing main view combines the current landscape, boat, equipment and three small collected-fish keepsakes. New catches update the display; sale does not erase it. A collected fish opens its collection entry, with names/counts in accessible labels and tooltips. Ordinary idle/wait text recedes while urgent bite/empty-bait/save-error information remains discoverable. The scene stays present when tools open. The small menu separates shop, collection, gear and travel instead of displaying every control at once.
-- Gear has a visible silhouette and real timing effects: each level removes0.5 seconds from the next bite wait and adds1 second of hook response; level1 is18–30/5 seconds and level8 is14.5–26.5/12 seconds. Already saved casts retain their original timing. Shop still shows pack quantity5, prices50/150, stock and rare shares12/27% beside7% free bait. Casting consumes one paid bait. Travel shows both cumulative catches and four species from the preceding region. Confirmed state transitions drive visual results.
-- Sword growth uses one large illustrated sword, a functional timing gauge, hammer and safe-upgrade rune. Current odds and pity count stay visible; the small tool view gives exact costs, guarantee rules and ten forms. Failure never destroys the sword.
-- Garden pots show soil, seed, sprout, leaves, then mature plant families. Twelve mature illustrations represent 40 species; do not imply every species has a unique illustration.
-- Opening the garden magnifier replaces the pot area with a transparent 8-seed picture catalog. Five pages fit inside the widget without nested scrolling. Seed selection, next unlock progress, expansion, and an optional short care note share the same small view; do not restore the large white text panel.
-- Picture buttons keep explicit accessible names and native title tooltips. Garden seed/expansion tools and detailed records live behind the magnifier. Mature plants sway; watering-needed pots show a watering-can marker.
-- Motion uses integer-pixel translations and steps rather than soft rotations or toy-like scale effects. Bobber bites and confirmed catch/upgrade/water/harvest signals remain clear. Hidden documents pause CSS animation/clocks; compact/game switching unmount content; reduced-motion removes decoration. Functional time/state remains available in labels.
+## Visual world
+
+- One coherent miniature: timber home, rust roof, large leafy tree, dock, boat, turquoise water and broken shoreline. Transparent outside the actual island silhouette, no rectangular water or sky background.
+- Pixel art follows the approved A board. Quiet natural palette: sea teal/sage, sand/linen, ochre/rust and charcoal timber. UI ink#304940, readable temporary surface#f5efe3. Do not grayscale the new raster assets.
+- All art comes from the built-in image generator: coast-island.png, coast-actor.png(4×4), coast-props.png(4×4 first8). coast-prompts.json preserves exact prompts, source files, alpha and measured frame anchors. Align at display time; do not repaint or trim generated pixels manually.
+- True1× canvas is280×280 inside the280×380 widget. No scaling the whole UI to fake its actual size. The actor is a small adult figure, with feet fixed to the projected paths/dock/beach. Props sit in the same perspective and scale as the house.
+
+## Interaction and motion
+
+- Dock, beach and home are real invisible-background buttons with native tooltip names and visible keyboard focus. Pointer interaction stays inside the scene; no three-game nav or permanent numerical HUD.
+- Person walks from home through the path to the destination, acts, returns; rewards occur once at completed return. Gathered wood enables the next home decoration. Objects stay visibly placed within the session.
+- A few local water glints and rising pixel smoke provide quiet ambient motion. Do not float or rotate the whole island. Animation and temporary progress pause with the user control, hidden document, compact state or info view. Reduced motion disables ambient motion and simplifies walking.
+- Tiny top controls provide drag, pause, info, compact and native close. Plain text controls have no fill or border; essential text over wallpaper uses a thin light keyline. No hover decoration, box shadows or rounded cards. Font weight500/at most700, maximum34px; current controls9px and status10px at logical1×.
+- Info/errors are readable inline overlays only when opened/needed. The info must disclose this is a screen prototype whose temporary play resets on close; old records remain intact.
+
+## Verification
+
+View bright and dark backgrounds at1×, all action poses and placed props. Check walk anchors, no atlas neighbors/clipping, layout within280×380, single-action lock, wood consumption, pause/hidden/compact preservation, keyboard access and reduced motion. Preserve the existing native desktop-layer placement and cross-monitor drag policy.

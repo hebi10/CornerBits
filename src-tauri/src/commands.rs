@@ -14,6 +14,11 @@ fn locked(store: &NativeStore) -> Result<std::sync::MutexGuard<'_, Store>, Strin
 }
 
 #[tauri::command]
+pub async fn inspect_state(store: State<'_, NativeStore>) -> Result<Option<AppState>, String> {
+    locked(&store)?.inspect()
+}
+
+#[tauri::command]
 pub async fn load_state(store: State<'_, NativeStore>) -> Result<Option<AppState>, String> {
     locked(&store)?.load()
 }

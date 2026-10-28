@@ -141,10 +141,10 @@ pub fn run() {
         .setup(|app| {
             let store = Store::new(app.path().app_data_dir()?);
             let saved_position = store.load_position();
-            let initial_settings = match store.load() {
+            let initial_settings = match store.inspect() {
                 Ok(state) => state.map(|state| state.settings),
                 Err(error) => {
-                    // The frontend's load_state call presents recovery UI. Do
+                    // The frontend's state inspection presents recovery UI. Do
                     // not write defaults or hide a data failure by resetting it.
                     eprintln!("CornerBits initial state: {error}");
                     None
@@ -255,6 +255,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             resize_widget,
+            commands::inspect_state,
             commands::load_state,
             commands::save_state,
             commands::export_backup,

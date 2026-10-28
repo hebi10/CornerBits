@@ -1,0 +1,1517 @@
+{
+  "tool": "built-in image_gen",
+  "created_at": "2026-10-28",
+  "transparent_background": true,
+  "reference": "C:/Users/박도영/.codex/generated_images/01a1803c-8aa9-7981-a1b6-03713df19263/exec-5648c555-8428-4795-8ee2-0123ed0ba22c.png",
+  "reference_region": "LEFT A coastal living only",
+  "raster_editing": "None. Final PNG pixel data is identical to built-in generated originals. Only exact prompt text was embedded as PNG tEXt metadata. Canvas and alignment corrections are display-time offsets below; no crop, resize, alpha cleanup or repaint was applied.",
+  "measurement_notes": [
+    "Bounding boxes use alpha >16 to ignore imperceptible alpha residue. All exact alpha extrema and raw transparent fractions are also preserved.",
+    "Generation requested 1024x1024, but the built-in tool returned 1254x1254 RGBA. It is still square. Atlas grid is 4x4 equal fractional cells of 313.5px; CSS background-size:400% 400% may address it directly.",
+    "Cell measurement boxes are rounded pixel boundaries. Positions/fractions below refer to the exact 313.5px logical cell origin.",
+    "Actor estimated foot center is the midpoint of all visible alpha>64 pixels in the bottom 8px of the alpha>16 silhouette. It is a measured ground-footprint approximation, not an authored joint.",
+    "Props cells8..15 contain no alpha>16 artwork; they have only imperceptible low-alpha generation residue and are never used by the product."
+  ],
+  "assets": [
+    {
+      "name": "island",
+      "file": "public/art/coast-island.png",
+      "generated_original": "C:/Users/박도영/.codex/generated_images/01a18154-3778-7610-be3d-404684eb2028/exec-0f6a7786-f445-4b8e-992d-61f8652d6b69.png",
+      "prompt": "Use case: background-extraction. Asset type: transparent game-world PNG for a 280px-wide desktop widget. Input image 1 is the authoritative visual reference. Recreate ONLY the LEFT panel A coastal living scene as ONE standalone SQUARE 1024x1024 PNG; do not recreate panels B/C, labels, dividers, or the gray display background.\nKeep A's same location, same three-quarter slightly elevated side view and same arrangement: small weathered gray-brown timber cottage with rust-terracotta pitched roof at upper-middle left, one stone chimney, broad mature olive/teal-green tree immediately behind to the right, small pale sand-and-grass coastal ledge, rocky right shoreline descending toward the front, weathered timber jetty stretching out toward lower left, and a small empty wooden rowboat directly in the water below the jetty. Keep the tiny square white flowers, quiet teal and turquoise coastal water with square pixel glints and foam around shore rocks, warm tiny cottage windows, understated wood/stone texture. The main tree and house should have the same relative proportions as A.\nMake it the same restrained colored pixel art seen in A, visible crisp little square pixel clusters and stepped edges, warm brown wood, gray rocks, sandy beige path, dark desaturated teal water and olive tree. Preserve A's detailed but calm visual density, no cartoon redesign.\nRequired cleanup: REMOVE ALL human figures, fishing rods/lines, all chimney smoke, all separately placeable flowerpots, portable lanterns, benches, fish displays and loose wood bundles. Keep the chimney itself, original pier and empty boat. Do not introduce new structures or collectibles. Empty walkable area at cottage entrance, dock end and right sand shore is useful.\nTransparency: actual alpha PNG. Only the connected irregular island silhouette of the terrain plus its immediate coastal water patch is visible; ALL the exterior around that cutout is fully transparent, not gray, white, checkerboard or a full rectangular ocean. Water remains part of the single coherent cutout patch with pixel-stepped outer edges as in A. The visible cutout fills about 90% of total canvas width, 84% height, centered with small transparent outer gutters. No broad empty margins. No text, no letter A, no border, no panels, no frame, no watermark. Keep every branch, rock, boat and shore edge entirely within the square.",
+      "canvas": {
+        "requested": [
+          1024,
+          1024
+        ],
+        "actual": [
+          1254,
+          1254
+        ],
+        "mode": "RGBA",
+        "square": true
+      },
+      "alpha": {
+        "extrema": [
+          0,
+          255
+        ],
+        "fully_transparent_fraction": 0.50107916,
+        "raw_nonzero_bbox": [
+          0,
+          5,
+          1242,
+          1254
+        ],
+        "visible_bbox_threshold_16": [
+          23,
+          168,
+          1232,
+          1146
+        ],
+        "visible_bbox_fraction": [
+          0.018341,
+          0.133971,
+          0.982456,
+          0.913876
+        ],
+        "corners": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "preservation": {
+        "pixel_data_identical_to_original": true,
+        "decoded_rgba_sha256": "18ebae25773889629d079a35bdafd486b8ba14e618744f12a98b2451bde7d332",
+        "original_file_sha256": "578eda2acf667deda170ed3cd882a9044272d43dba310f720f0e307e0d591a6a",
+        "final_file_sha256": "fd7f16024b1fa6461bd67e58aef3b8485887317bf85ffc8e40d913ff96ee1a49"
+      },
+      "metadata": {
+        "format": "PNG tEXt",
+        "command": "impeccable.cmd embed-prompt <PNG> --prompt-file <UTF8 exact prompt txt>",
+        "prompt_file": ".tools/coast-island-prompt.txt",
+        "scan_result": "21 rasters, 0 missing"
+      },
+      "grid": {
+        "columns": 1,
+        "rows": 1
+      },
+      "visual_estimate_anchors_fraction": {
+        "cottageDoor": [
+          0.46,
+          0.46
+        ],
+        "dockAction": [
+          0.2,
+          0.51
+        ],
+        "sandAction": [
+          0.82,
+          0.68
+        ],
+        "chimneyOpening": [
+          0.533,
+          0.22
+        ]
+      }
+    },
+    {
+      "name": "actor",
+      "file": "public/art/coast-actor.png",
+      "generated_original": "C:/Users/박도영/.codex/generated_images/01a18154-3778-7610-be3d-404684eb2028/exec-53317725-04d6-41b5-88a1-7ac82b93754c.png",
+      "prompt": "Use case: stylized-concept. Asset type: transparent pixel-art game character animation atlas. Input image 1 is ONLY a style/scale/perspective reference: match the tiny adult angler from LEFT panel A, never panels B or C. Create one EXACT SQUARE 1024x1024 transparent PNG with exactly FOUR columns by FOUR rows, sixteen equal 256x256 cells in strict row-major order. No lines, labels, cell borders or text.\nSubject in every cell: the SAME small adult coastal resident wearing a plain brown brimmed cap, muted teal long-sleeved shirt, dark brown trousers and dark boots. Slim ordinary adult proportions, small head, neutral tiny face almost unreadable. This is a small adult actor for the referenced miniature cottage scene, not a cute mascot; no big round head, large eyes, blush or smile. Face and body point toward screen LEFT in the same three-quarter side perspective as A. Coarse clear square pixel clusters and hard pixel steps; subdued teal, brown, gray shading that matches A.\nCRITICAL GRID GEOMETRY: keep all sixteen sprites at exactly the SAME body scale, with each cell's fixed feet-ground anchor at local x=50%, y=82% (128,210 pixels). The standing head is around y=26%. Transparent margin is generous on all sides, one isolated person per cell, no floor plane. Bending changes upper-body pose but keeps the feet planted at that exact anchor. Never center varying pose bounding boxes independently. Every pose fits wholly within its own cell, no overlap.\nRow 0 = WALK cycle, columns 0..3 four subtly alternating step poses walking toward screen left. Feet alternate front/back; stable head height, the motion reads calmly at tiny size.\nRow 1 = FISH cycle, columns 0..3 standing with hands extended toward screen left: prepare hands forward, hold hands forward, small pull back, hands relax. DO NOT draw a fishing rod, pole, long stick, line, hook, fish or dock. Only simple arm/hand pose changes; the app will add a short geometric rod.\nRow 2 = GATHER cycle, columns 0..3: stand and reach slightly low, bend forward toward ground, deepest brief gather bend, rise carrying at most one very small piece of driftwood close to the body. Keep feet anchor fixed and driftwood tiny.\nRow 3 = DECORATE cycle, columns 0..3: stand with hands near waist, reach hands forward, lower hands slightly as if placing a small object, return standing. No large object, furniture, pot or ground.\nALL background pixels genuinely transparent alpha. No environmental scene, no shadows outside boots, no scenery, no inventory icon, no embedded floor, no fake checkerboard. Exact aligned 4x4 square sheet, preserve all transparent margins.",
+      "canvas": {
+        "requested": [
+          1024,
+          1024
+        ],
+        "actual": [
+          1254,
+          1254
+        ],
+        "mode": "RGBA",
+        "square": true
+      },
+      "alpha": {
+        "extrema": [
+          0,
+          255
+        ],
+        "fully_transparent_fraction": 0.83097151,
+        "raw_nonzero_bbox": [
+          0,
+          9,
+          1238,
+          1254
+        ],
+        "visible_bbox_threshold_16": [
+          99,
+          94,
+          1155,
+          1202
+        ],
+        "visible_bbox_fraction": [
+          0.078947,
+          0.07496,
+          0.921053,
+          0.958533
+        ],
+        "corners": [
+          0,
+          0,
+          1,
+          0
+        ]
+      },
+      "preservation": {
+        "pixel_data_identical_to_original": true,
+        "decoded_rgba_sha256": "5d9b0294509da861f08bc00c0ab2190fc7330201b06226478ee7c1e2cf7f42a1",
+        "original_file_sha256": "1bec2778e6ca6af3dfe07ee793805c58f8ab74027e782075ee1d705bcf773f00",
+        "final_file_sha256": "ff29a7dd7b7d0e4b5b79d4d74806492f6c376b5e02463d378809f3c33c05a83d"
+      },
+      "metadata": {
+        "format": "PNG tEXt",
+        "command": "impeccable.cmd embed-prompt <PNG> --prompt-file <UTF8 exact prompt txt>",
+        "prompt_file": ".tools/coast-actor-prompt.txt",
+        "scan_result": "21 rasters, 0 missing"
+      },
+      "grid": {
+        "columns": 4,
+        "rows": 4,
+        "logical_cell_width": 313.5,
+        "logical_cell_height": 313.5,
+        "order": "row-major",
+        "css_background_size": "400% 400%",
+        "css_background_positions_percent": [
+          0,
+          33.333333333333336,
+          66.66666666666667,
+          100
+        ],
+        "pixels_corrected": false
+      },
+      "cells": [
+        {
+          "index": 0,
+          "row": 0,
+          "column": 0,
+          "content": "walk0",
+          "rounded_source_box": [
+            0,
+            0,
+            314,
+            314
+          ],
+          "alpha_extrema": [
+            0,
+            255
+          ],
+          "raw_nonzero_pixels": 18387,
+          "visible_pixel_count_threshold_16": 10751,
+          "visible_bbox_in_rounded_cell": [
+            106,
+            94,
+            216,
+            287
+          ],
+          "visible_bbox_in_logical_cell_fraction": [
+            0.338118,
+            0.299841,
+            0.688995,
+            0.91547
+          ],
+          "estimated_feet_anchor_fraction": [
+            0.516746,
+            0.91547
+          ],
+          "desired_display_anchor_fraction": [
+            0.5,
+            0.82
+          ],
+          "display_translation_fraction": [
+            -0.016746,
+            -0.09547
+          ],
+          "display_translation_px_for_36px_cell": [
+            -0.603,
+            -3.437
+          ]
+        },
+        {
+          "index": 1,
+          "row": 0,
+          "column": 1,
+          "content": "walk1",
+          "rounded_source_box": [
+            314,
+            0,
+            627,
+            314
+          ],
+          "alpha_extrema": [
+            0,
+            255
+          ],
+          "raw_nonzero_pixels": 18132,
+          "visible_pixel_count_threshold_16": 10775,
+          "visible_bbox_in_rounded_cell": [
+            110,
+            94,
+            214,
+            287
+          ],
+          "visible_bbox_in_logical_cell_fraction": [
+            0.352472,
+            0.299841,
+            0.684211,
+            0.91547
+          ],
+          "estimated_feet_anchor_fraction": [
+            0.516746,
+            0.91547
+          ],
+          "desired_display_anchor_fraction": [
+            0.5,
+            0.82
+          ],
+          "display_translation_fraction": [
+            -0.016746,
+            -0.09547
+          ],
+          "display_translation_px_for_36px_cell": [
+            -0.603,
+            -3.437
+          ]
+        },
+        {
+          "index": 2,
+          "row": 0,
+          "column": 2,
+          "content": "walk2",
+          "rounded_source_box": [
+            627,
+            0,
+            940,
+            314
+          ],
+          "alpha_extrema": [
+            0,
+            255
+          ],
+          "raw_nonzero_pixels": 18581,
+          "visible_pixel_count_threshold_16": 10814,
+          "visible_bbox_in_rounded_cell": [
+            107,
+            94,
+            216,
+            287
+          ],
+          "visible_bbox_in_logical_cell_fraction": [
+            0.341308,
+            0.299841,
+            0.688995,
+            0.91547
+          ],
+          "estimated_feet_anchor_fraction": [
+            0.515152,
+            0.91547
+          ],
+          "desired_display_anchor_fraction": [
+            0.5,
+            0.82
+          ],
+          "display_translation_fraction": [
+            -0.015152,
+            -0.09547
+          ],
+          "display_translation_px_for_36px_cell": [
+            -0.545,
+            -3.437
+          ]
+        },
+        {
+          "index": 3,
+          "row": 0,
+          "column": 3,
+          "content": "walk3",
+          "rounded_source_box": [
+            940,
+            0,
+            1254,
+            314
+          ],
+          "alpha_extrema": [
+            0,
+            255
+          ],
+          "raw_nonzero_pixels": 18088,
+          "visible_pixel_count_threshold_16": 10761,
+          "visible_bbox_in_rounded_cell": [
+            111,
+            94,
+            215,
+            287
+          ],
+          "visible_bbox_in_logical_cell_fraction": [
+            0.352472,
+            0.299841,
+            0.684211,
+            0.91547
+          ],
+          "estimated_feet_anchor_fraction": [
+            0.518341,
+            0.91547
+          ],
+          "desired_display_anchor_fraction": [
+            0.5,
+            0.82
+          ],
+          "display_translation_fraction": [
+            -0.018341,
+            -0.09547
+          ],
+          "display_translation_px_for_36px_cell": [
+            -0.66,
+            -3.437
+          ]
+        },
+        {
+          "index": 4,
+          "row": 1,
+          "column": 0,
+          "content": "fish0",
+          "rounded_source_box": [
+            0,
+            314,
+            314,
+            627
+          ],
+          "alpha_extrema": [
+            0,
+            255
+          ],
+          "raw_nonzero_pixels": 15887,
+          "visible_pixel_count_threshold_16": 10736,
+          "visible_bbox_in_rounded_cell": [
+            99,
+            91,
+            209,
+            286
+          ],
+          "visible_bbox_in_logical_cell_fraction": [
+            0.315789,
+            0.291866,
+            0.666667,
+            0.913876
+          ],
+          "estimated_feet_anchor_fraction": [
+            0.545455,
+            0.913876
+          ],
+          "desired_display_anchor_fraction": [
+            0.5,
+            0.82
+          ],
+          "display_translation_fraction": [
+            -0.045455,
+            -0.093876
+          ],
+          "display_translation_px_for_36px_cell": [
+            -1.636,
+            -3.38
+          ]
+        },
+        {
+          "index": 5,
+          "row": 1,
+          "column": 1,
+          "content": "fish1",
+          "rounded_source_box": [
+            314,
+            314,
+            627,
+            627
+          ],
+          "alpha_extrema": [
+            0,
+            255
+          ],
+          "raw_nonzero_pixels": 16254,
+          "visible_pixel_count_threshold_16": 10559,
+          "visible_bbox_in_rounded_cell": [
+            100,
+            90,
+            208,
+            286
+          ],
+          "visible_bbox_in_logical_cell_fraction": [
+            0.320574,
+            0.288676,
+            0.665072,
+            0.913876
+          ],
+          "estimated_feet_anchor_fraction": [
+            0.54067,
+            0.913876
+          ],
+          "desired_display_anchor_fraction": [
+            0.5,
+            0.82
+          ],
+          "display_translation_fraction": [
+            -0.04067,
+            -0.093876
+          ],
+          "display_translation_px_for_36px_cell": [
+            -1.464,
+            -3.38
+          ]
+        },
+        {
+          "index": 6,
+          "row": 1,
+          "column": 2,
+          "content": "fish2",
+          "rounded_source_box": [
+            627,
+            314,
+            940,
+            627
+          ],
+          "alpha_extrema": [
+            0,
+            255
+          ],
+          "raw_nonzero_pixels": 14761,
+          "visible_pixel_count_threshold_16": 10314,
+          "visible_bbox_in_rounded_cell": [
+            113,
+            91,
+            208,
+            286
+          ],
+          "visible_bbox_in_logical_cell_fraction": [
+            0.360447,
+            0.291866,
+            0.663477,
+            0.913876
+          ],
+          "estimated_feet_anchor_fraction": [
+            0.542265,
+            0.913876
+          ],
+          "desired_display_anchor_fraction": [
+            0.5,
+            0.82
+          ],
+          "display_translation_fraction": [
+            -0.042265,
+            -0.093876
+          ],
+          "display_translation_px_for_36px_cell": [
+            -1.522,
+            -3.38
+          ]
+        },
+        {
+          "index": 7,
+          "row": 1,
+          "column": 3,
+          "content": "fish3",
+          "rounded_source_box": [
+            940,
+            314,
+            1254,
+            627
+          ],
+          "alpha_extrema": [
+            0,
+            255
+          ],
+          "raw_nonzero_pixels": 14298,
+          "visible_pixel_count_threshold_16": 9703,
+          "visible_bbox_in_rounded_cell": [
+            119,
+            91,
+            200,
+            286
+          ],
+          "visible_bbox_in_logical_cell_fraction": [
+            0.37799,
+            0.291866,
+            0.636364,
+            0.913876
+          ],
+          "estimated_feet_anchor_fraction": [
+            0.527911,
+            0.913876
+          ],
+          "desired_display_anchor_fraction": [
+            0.5,
+            0.82
+          ],
+          "display_translation_fraction": [
+            -0.027911,
+            -0.093876
+          ],
+          "display_translation_px_for_36px_cell": [
+            -1.005,
+            -3.38
+          ]
+        },
+        {
+          "index": 8,
+          "row": 2,
+          "column": 0,
+          "content": "gather0",
+          "rounded_source_box": [
+            0,
+            627,
+            314,
+            940
+          ],
+          "alpha_extrema": [
+            0,
+            255
+          ],
+          "raw_nonzero_pixels": 17848,
+          "visible_pixel_count_threshold_16": 11330,
+          "visible_bbox_in_rounded_cell": [
+            102,
+            94,
+            209,
+            288
+          ],
+          "visible_bbox_in_logical_cell_fraction": [
+            0.325359,
+            0.299841,
+            0.666667,
+            0.91866
+          ],
+          "estimated_feet_anchor_fraction": [
+            0.54067,
+            0.91866
+          ],
+          "desired_display_anchor_fraction": [
+            0.5,
+            0.82
+          ],
+          "display_translation_fraction": [
+            -0.04067,
+            -0.09866
+          ],
+          "display_translation_px_for_36px_cell": [
+            -1.464,
+            -3.552
+          ]
+        },
+        {
+          "index": 9,
+          "row": 2,
+          "column": 1,
+          "content": "gather1",
+          "rounded_source_box": [
+            314,
+            627,
+            627,
+            940
+          ],
+          "alpha_extrema": [
+            0,
+            255
+          ],
+          "raw_nonzero_pixels": 17899,
+          "visible_pixel_count_threshold_16": 11069,
+          "visible_bbox_in_rounded_cell": [
+            101,
+            124,
+            221,
+            288
+          ],
+          "visible_bbox_in_logical_cell_fraction": [
+            0.323764,
+            0.395534,
+            0.706539,
+            0.91866
+          ],
+          "estimated_feet_anchor_fraction": [
+            0.569378,
+            0.91866
+          ],
+          "desired_display_anchor_fraction": [
+            0.5,
+            0.82
+          ],
+          "display_translation_fraction": [
+            -0.069378,
+            -0.09866
+          ],
+          "display_translation_px_for_36px_cell": [
+            -2.498,
+            -3.552
+          ]
+        },
+        {
+          "index": 10,
+          "row": 2,
+          "column": 2,
+          "content": "gather2",
+          "rounded_source_box": [
+            627,
+            627,
+            940,
+            940
+          ],
+          "alpha_extrema": [
+            0,
+            255
+          ],
+          "raw_nonzero_pixels": 16667,
+          "visible_pixel_count_threshold_16": 10132,
+          "visible_bbox_in_rounded_cell": [
+            91,
+            158,
+            218,
+            288
+          ],
+          "visible_bbox_in_logical_cell_fraction": [
+            0.290271,
+            0.503987,
+            0.695375,
+            0.91866
+          ],
+          "estimated_feet_anchor_fraction": [
+            0.566188,
+            0.91866
+          ],
+          "desired_display_anchor_fraction": [
+            0.5,
+            0.82
+          ],
+          "display_translation_fraction": [
+            -0.066188,
+            -0.09866
+          ],
+          "display_translation_px_for_36px_cell": [
+            -2.383,
+            -3.552
+          ]
+        },
+        {
+          "index": 11,
+          "row": 2,
+          "column": 3,
+          "content": "gather3",
+          "rounded_source_box": [
+            940,
+            627,
+            1254,
+            940
+          ],
+          "alpha_extrema": [
+            0,
+            255
+          ],
+          "raw_nonzero_pixels": 15657,
+          "visible_pixel_count_threshold_16": 10499,
+          "visible_bbox_in_rounded_cell": [
+            120,
+            87,
+            202,
+            288
+          ],
+          "visible_bbox_in_logical_cell_fraction": [
+            0.38118,
+            0.277512,
+            0.642743,
+            0.91866
+          ],
+          "estimated_feet_anchor_fraction": [
+            0.526316,
+            0.91866
+          ],
+          "desired_display_anchor_fraction": [
+            0.5,
+            0.82
+          ],
+          "display_translation_fraction": [
+            -0.026316,
+            -0.09866
+          ],
+          "display_translation_px_for_36px_cell": [
+            -0.947,
+            -3.552
+          ]
+        },
+        {
+          "index": 12,
+          "row": 3,
+          "column": 0,
+          "content": "decorate0",
+          "rounded_source_box": [
+            0,
+            940,
+            314,
+            1254
+          ],
+          "alpha_extrema": [
+            0,
+            255
+          ],
+          "raw_nonzero_pixels": 15668,
+          "visible_pixel_count_threshold_16": 9832,
+          "visible_bbox_in_rounded_cell": [
+            117,
+            67,
+            201,
+            262
+          ],
+          "visible_bbox_in_logical_cell_fraction": [
+            0.373206,
+            0.212121,
+            0.641148,
+            0.834131
+          ],
+          "estimated_feet_anchor_fraction": [
+            0.529506,
+            0.834131
+          ],
+          "desired_display_anchor_fraction": [
+            0.5,
+            0.82
+          ],
+          "display_translation_fraction": [
+            -0.029506,
+            -0.014131
+          ],
+          "display_translation_px_for_36px_cell": [
+            -1.062,
+            -0.509
+          ]
+        },
+        {
+          "index": 13,
+          "row": 3,
+          "column": 1,
+          "content": "decorate1",
+          "rounded_source_box": [
+            314,
+            940,
+            627,
+            1254
+          ],
+          "alpha_extrema": [
+            0,
+            255
+          ],
+          "raw_nonzero_pixels": 17489,
+          "visible_pixel_count_threshold_16": 10763,
+          "visible_bbox_in_rounded_cell": [
+            98,
+            72,
+            209,
+            262
+          ],
+          "visible_bbox_in_logical_cell_fraction": [
+            0.314195,
+            0.22807,
+            0.668262,
+            0.834131
+          ],
+          "estimated_feet_anchor_fraction": [
+            0.545455,
+            0.834131
+          ],
+          "desired_display_anchor_fraction": [
+            0.5,
+            0.82
+          ],
+          "display_translation_fraction": [
+            -0.045455,
+            -0.014131
+          ],
+          "display_translation_px_for_36px_cell": [
+            -1.636,
+            -0.509
+          ]
+        },
+        {
+          "index": 14,
+          "row": 3,
+          "column": 2,
+          "content": "decorate2",
+          "rounded_source_box": [
+            627,
+            940,
+            940,
+            1254
+          ],
+          "alpha_extrema": [
+            0,
+            255
+          ],
+          "raw_nonzero_pixels": 15423,
+          "visible_pixel_count_threshold_16": 10657,
+          "visible_bbox_in_rounded_cell": [
+            113,
+            85,
+            215,
+            262
+          ],
+          "visible_bbox_in_logical_cell_fraction": [
+            0.360447,
+            0.269537,
+            0.685805,
+            0.834131
+          ],
+          "estimated_feet_anchor_fraction": [
+            0.575758,
+            0.834131
+          ],
+          "desired_display_anchor_fraction": [
+            0.5,
+            0.82
+          ],
+          "display_translation_fraction": [
+            -0.075758,
+            -0.014131
+          ],
+          "display_translation_px_for_36px_cell": [
+            -2.727,
+            -0.509
+          ]
+        },
+        {
+          "index": 15,
+          "row": 3,
+          "column": 3,
+          "content": "decorate3",
+          "rounded_source_box": [
+            940,
+            940,
+            1254,
+            1254
+          ],
+          "alpha_extrema": [
+            0,
+            255
+          ],
+          "raw_nonzero_pixels": 14761,
+          "visible_pixel_count_threshold_16": 9806,
+          "visible_bbox_in_rounded_cell": [
+            119,
+            67,
+            201,
+            262
+          ],
+          "visible_bbox_in_logical_cell_fraction": [
+            0.37799,
+            0.212121,
+            0.639553,
+            0.834131
+          ],
+          "estimated_feet_anchor_fraction": [
+            0.5311,
+            0.834131
+          ],
+          "desired_display_anchor_fraction": [
+            0.5,
+            0.82
+          ],
+          "display_translation_fraction": [
+            -0.0311,
+            -0.014131
+          ],
+          "display_translation_px_for_36px_cell": [
+            -1.12,
+            -0.509
+          ]
+        }
+      ]
+    },
+    {
+      "name": "props",
+      "file": "public/art/coast-props.png",
+      "generated_original": "C:/Users/박도영/.codex/generated_images/01a18154-3778-7610-be3d-404684eb2028/exec-832627db-42cc-4234-ace1-eb2e23035c81.png",
+      "prompt": "Use case: stylized-concept. Asset type: transparent coastal pixel-art prop atlas. Input image 1 is an authoritative style and perspective reference for LEFT panel A ONLY. Make one EXACT SQUARE 1024x1024 PNG with true alpha, strict FOUR columns by FOUR equal rows, each cell 256x256. No drawn grid lines, labels or text. There must be exactly EIGHT props in the first eight cells and the last eight cells entirely alpha empty.\nMatch A's quiet detailed pixel clusters, clear stepped silhouettes, desaturated brown timber, gray-blue fish, olive leaves, warm tiny amber light. Same slightly elevated three-quarter side view, same illumination and pixel density. These are little furnishing overlays for that cottage island, not big isolated item illustrations. Every prop is compact and centered with generous transparent gutters and a common ground anchor at local x=50%, y=80%. No background, floor/base panel, plinth, cast shadow panel, scenery or frame. Objects fit inside x=20..80%, y=20..82% of their cell.\nExact row-major cell content:\ncell0 row0 col0: EMPTY small simple wooden fish-drying rack: two short vertical posts with one horizontal crossbar, no canopy, no fish, no sign.\ncell1 row0 col1: exactly the SAME rack at EXACTLY the same scale/position, with ONE small silver-blue fish hanging from the crossbar.\ncell2 row0 col2: exactly the SAME rack, TWO small fish hanging from crossbar.\ncell3 row0 col3: exactly the SAME rack, THREE small fish hanging from crossbar.\ncell4 row1 col0: one compact low bundle of three small pieces of gathered driftwood, tied simply, no large logpile.\ncell5 row1 col1: one small terracotta flowerpot with muted green leaves and a few cream-colored flowers, compact as a cottage doorstep decoration.\ncell6 row1 col2: one small rustic dark-metal cottage EXTERIOR WALL LANTERN, warm amber glowing interior, tiny mounting bracket behind it; no wall, no post, no big bloom/glow disk.\ncell7 row1 col3: one small plain wooden two-seat bench in the same three-quarter view, short backrest and four feet, understated and weathered.\nCells8 through15, the entire bottom half of the canvas, MUST remain fully transparent and completely blank. Do not fill them with duplicates, alternate versions or ornament. Only first two rows populated. All eight props should be about the same useful on-screen footprint while preserving their natural proportions. No people, no scenery, no letters, no watermark, no panels.",
+      "canvas": {
+        "requested": [
+          1024,
+          1024
+        ],
+        "actual": [
+          1254,
+          1254
+        ],
+        "mode": "RGBA",
+        "square": true
+      },
+      "alpha": {
+        "extrema": [
+          0,
+          255
+        ],
+        "fully_transparent_fraction": 0.85479067,
+        "raw_nonzero_bbox": [
+          0,
+          17,
+          1253,
+          1254
+        ],
+        "visible_bbox_threshold_16": [
+          60,
+          95,
+          1214,
+          610
+        ],
+        "visible_bbox_fraction": [
+          0.047847,
+          0.075758,
+          0.968102,
+          0.486443
+        ],
+        "corners": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "preservation": {
+        "pixel_data_identical_to_original": true,
+        "decoded_rgba_sha256": "57740657c8f6b090c2d4edfcdecf3efb749ae5afd2cbf78fa0c68bbf0e22c327",
+        "original_file_sha256": "1ca574e3197659f2ac3c869082060b86f2da9d4e5b46d8228335b737491df81f",
+        "final_file_sha256": "9a7bf0f405dda8d1188250628fe9aa21b7d370f7b064fa862a1fa05576063606"
+      },
+      "metadata": {
+        "format": "PNG tEXt",
+        "command": "impeccable.cmd embed-prompt <PNG> --prompt-file <UTF8 exact prompt txt>",
+        "prompt_file": ".tools/coast-props-prompt.txt",
+        "scan_result": "21 rasters, 0 missing"
+      },
+      "grid": {
+        "columns": 4,
+        "rows": 4,
+        "logical_cell_width": 313.5,
+        "logical_cell_height": 313.5,
+        "order": "row-major",
+        "css_background_size": "400% 400%",
+        "css_background_positions_percent": [
+          0,
+          33.333333333333336,
+          66.66666666666667,
+          100
+        ],
+        "pixels_corrected": false
+      },
+      "cells": [
+        {
+          "index": 0,
+          "row": 0,
+          "column": 0,
+          "content": "fishRackEmpty",
+          "rounded_source_box": [
+            0,
+            0,
+            314,
+            314
+          ],
+          "alpha_extrema": [
+            0,
+            255
+          ],
+          "raw_nonzero_pixels": 23342,
+          "visible_pixel_count_threshold_16": 14170,
+          "visible_bbox_in_rounded_cell": [
+            60,
+            95,
+            265,
+            279
+          ],
+          "visible_bbox_in_logical_cell_fraction": [
+            0.191388,
+            0.30303,
+            0.845295,
+            0.889952
+          ],
+          "estimated_bbox_ground_anchor_fraction": [
+            0.518341,
+            0.889952
+          ],
+          "desired_display_anchor_fraction": [
+            0.5,
+            0.8
+          ],
+          "display_translation_fraction": [
+            -0.018341,
+            -0.089952
+          ],
+          "display_translation_px_for_36px_cell": [
+            -0.66,
+            -3.238
+          ]
+        },
+        {
+          "index": 1,
+          "row": 0,
+          "column": 1,
+          "content": "fishRack1",
+          "rounded_source_box": [
+            314,
+            0,
+            627,
+            314
+          ],
+          "alpha_extrema": [
+            0,
+            255
+          ],
+          "raw_nonzero_pixels": 26007,
+          "visible_pixel_count_threshold_16": 16188,
+          "visible_bbox_in_rounded_cell": [
+            59,
+            95,
+            264,
+            278
+          ],
+          "visible_bbox_in_logical_cell_fraction": [
+            0.189793,
+            0.30303,
+            0.8437,
+            0.886762
+          ],
+          "estimated_bbox_ground_anchor_fraction": [
+            0.516746,
+            0.886762
+          ],
+          "desired_display_anchor_fraction": [
+            0.5,
+            0.8
+          ],
+          "display_translation_fraction": [
+            -0.016746,
+            -0.086762
+          ],
+          "display_translation_px_for_36px_cell": [
+            -0.603,
+            -3.123
+          ]
+        },
+        {
+          "index": 2,
+          "row": 0,
+          "column": 2,
+          "content": "fishRack2",
+          "rounded_source_box": [
+            627,
+            0,
+            940,
+            314
+          ],
+          "alpha_extrema": [
+            0,
+            255
+          ],
+          "raw_nonzero_pixels": 31437,
+          "visible_pixel_count_threshold_16": 18456,
+          "visible_bbox_in_rounded_cell": [
+            59,
+            95,
+            264,
+            279
+          ],
+          "visible_bbox_in_logical_cell_fraction": [
+            0.188198,
+            0.30303,
+            0.842105,
+            0.889952
+          ],
+          "estimated_bbox_ground_anchor_fraction": [
+            0.515152,
+            0.889952
+          ],
+          "desired_display_anchor_fraction": [
+            0.5,
+            0.8
+          ],
+          "display_translation_fraction": [
+            -0.015152,
+            -0.089952
+          ],
+          "display_translation_px_for_36px_cell": [
+            -0.545,
+            -3.238
+          ]
+        },
+        {
+          "index": 3,
+          "row": 0,
+          "column": 3,
+          "content": "fishRack3",
+          "rounded_source_box": [
+            940,
+            0,
+            1254,
+            314
+          ],
+          "alpha_extrema": [
+            0,
+            255
+          ],
+          "raw_nonzero_pixels": 31002,
+          "visible_pixel_count_threshold_16": 20524,
+          "visible_bbox_in_rounded_cell": [
+            60,
+            95,
+            265,
+            278
+          ],
+          "visible_bbox_in_logical_cell_fraction": [
+            0.189793,
+            0.30303,
+            0.8437,
+            0.886762
+          ],
+          "estimated_bbox_ground_anchor_fraction": [
+            0.516746,
+            0.886762
+          ],
+          "desired_display_anchor_fraction": [
+            0.5,
+            0.8
+          ],
+          "display_translation_fraction": [
+            -0.016746,
+            -0.086762
+          ],
+          "display_translation_px_for_36px_cell": [
+            -0.603,
+            -3.123
+          ]
+        },
+        {
+          "index": 4,
+          "row": 1,
+          "column": 0,
+          "content": "driftwoodBundle",
+          "rounded_source_box": [
+            0,
+            314,
+            314,
+            627
+          ],
+          "alpha_extrema": [
+            0,
+            255
+          ],
+          "raw_nonzero_pixels": 15257,
+          "visible_pixel_count_threshold_16": 11869,
+          "visible_bbox_in_rounded_cell": [
+            81,
+            170,
+            259,
+            278
+          ],
+          "visible_bbox_in_logical_cell_fraction": [
+            0.258373,
+            0.54386,
+            0.826156,
+            0.888357
+          ],
+          "estimated_bbox_ground_anchor_fraction": [
+            0.542265,
+            0.888357
+          ],
+          "desired_display_anchor_fraction": [
+            0.5,
+            0.8
+          ],
+          "display_translation_fraction": [
+            -0.042265,
+            -0.088357
+          ],
+          "display_translation_px_for_36px_cell": [
+            -1.522,
+            -3.181
+          ]
+        },
+        {
+          "index": 5,
+          "row": 1,
+          "column": 1,
+          "content": "flowerpot",
+          "rounded_source_box": [
+            314,
+            314,
+            627,
+            627
+          ],
+          "alpha_extrema": [
+            0,
+            255
+          ],
+          "raw_nonzero_pixels": 34516,
+          "visible_pixel_count_threshold_16": 25824,
+          "visible_bbox_in_rounded_cell": [
+            64,
+            62,
+            246,
+            287
+          ],
+          "visible_bbox_in_logical_cell_fraction": [
+            0.205742,
+            0.199362,
+            0.786284,
+            0.917065
+          ],
+          "estimated_bbox_ground_anchor_fraction": [
+            0.496013,
+            0.917065
+          ],
+          "desired_display_anchor_fraction": [
+            0.5,
+            0.8
+          ],
+          "display_translation_fraction": [
+            0.003987,
+            -0.117065
+          ],
+          "display_translation_px_for_36px_cell": [
+            0.144,
+            -4.214
+          ]
+        },
+        {
+          "index": 6,
+          "row": 1,
+          "column": 2,
+          "content": "wallLantern",
+          "rounded_source_box": [
+            627,
+            314,
+            940,
+            627
+          ],
+          "alpha_extrema": [
+            0,
+            255
+          ],
+          "raw_nonzero_pixels": 24701,
+          "visible_pixel_count_threshold_16": 18291,
+          "visible_bbox_in_rounded_cell": [
+            75,
+            75,
+            230,
+            278
+          ],
+          "visible_bbox_in_logical_cell_fraction": [
+            0.239234,
+            0.240829,
+            0.733652,
+            0.888357
+          ],
+          "estimated_bbox_ground_anchor_fraction": [
+            0.486443,
+            0.888357
+          ],
+          "desired_display_anchor_fraction": [
+            0.5,
+            0.8
+          ],
+          "display_translation_fraction": [
+            0.013557,
+            -0.088357
+          ],
+          "display_translation_px_for_36px_cell": [
+            0.488,
+            -3.181
+          ]
+        },
+        {
+          "index": 7,
+          "row": 1,
+          "column": 3,
+          "content": "bench",
+          "rounded_source_box": [
+            940,
+            314,
+            1254,
+            627
+          ],
+          "alpha_extrema": [
+            0,
+            255
+          ],
+          "raw_nonzero_pixels": 38335,
+          "visible_pixel_count_threshold_16": 29567,
+          "visible_bbox_in_rounded_cell": [
+            31,
+            85,
+            274,
+            296
+          ],
+          "visible_bbox_in_logical_cell_fraction": [
+            0.097289,
+            0.272727,
+            0.872408,
+            0.945774
+          ],
+          "estimated_bbox_ground_anchor_fraction": [
+            0.484848,
+            0.945774
+          ],
+          "desired_display_anchor_fraction": [
+            0.5,
+            0.8
+          ],
+          "display_translation_fraction": [
+            0.015152,
+            -0.145774
+          ],
+          "display_translation_px_for_36px_cell": [
+            0.545,
+            -5.248
+          ]
+        },
+        {
+          "index": 8,
+          "row": 2,
+          "column": 0,
+          "content": "unused",
+          "rounded_source_box": [
+            0,
+            627,
+            314,
+            940
+          ],
+          "alpha_extrema": [
+            0,
+            1
+          ],
+          "raw_nonzero_pixels": 475,
+          "visible_pixel_count_threshold_16": 0,
+          "visible_bbox_in_rounded_cell": null
+        },
+        {
+          "index": 9,
+          "row": 2,
+          "column": 1,
+          "content": "unused",
+          "rounded_source_box": [
+            314,
+            627,
+            627,
+            940
+          ],
+          "alpha_extrema": [
+            0,
+            1
+          ],
+          "raw_nonzero_pixels": 868,
+          "visible_pixel_count_threshold_16": 0,
+          "visible_bbox_in_rounded_cell": null
+        },
+        {
+          "index": 10,
+          "row": 2,
+          "column": 2,
+          "content": "unused",
+          "rounded_source_box": [
+            627,
+            627,
+            940,
+            940
+          ],
+          "alpha_extrema": [
+            0,
+            1
+          ],
+          "raw_nonzero_pixels": 1444,
+          "visible_pixel_count_threshold_16": 0,
+          "visible_bbox_in_rounded_cell": null
+        },
+        {
+          "index": 11,
+          "row": 2,
+          "column": 3,
+          "content": "unused",
+          "rounded_source_box": [
+            940,
+            627,
+            1254,
+            940
+          ],
+          "alpha_extrema": [
+            0,
+            1
+          ],
+          "raw_nonzero_pixels": 708,
+          "visible_pixel_count_threshold_16": 0,
+          "visible_bbox_in_rounded_cell": null
+        },
+        {
+          "index": 12,
+          "row": 3,
+          "column": 0,
+          "content": "unused",
+          "rounded_source_box": [
+            0,
+            940,
+            314,
+            1254
+          ],
+          "alpha_extrema": [
+            0,
+            1
+          ],
+          "raw_nonzero_pixels": 81,
+          "visible_pixel_count_threshold_16": 0,
+          "visible_bbox_in_rounded_cell": null
+        },
+        {
+          "index": 13,
+          "row": 3,
+          "column": 1,
+          "content": "unused",
+          "rounded_source_box": [
+            314,
+            940,
+            627,
+            1254
+          ],
+          "alpha_extrema": [
+            0,
+            1
+          ],
+          "raw_nonzero_pixels": 40,
+          "visible_pixel_count_threshold_16": 0,
+          "visible_bbox_in_rounded_cell": null
+        },
+        {
+          "index": 14,
+          "row": 3,
+          "column": 2,
+          "content": "unused",
+          "rounded_source_box": [
+            627,
+            940,
+            940,
+            1254
+          ],
+          "alpha_extrema": [
+            0,
+            1
+          ],
+          "raw_nonzero_pixels": 96,
+          "visible_pixel_count_threshold_16": 0,
+          "visible_bbox_in_rounded_cell": null
+        },
+        {
+          "index": 15,
+          "row": 3,
+          "column": 3,
+          "content": "unused",
+          "rounded_source_box": [
+            940,
+            940,
+            1254,
+            1254
+          ],
+          "alpha_extrema": [
+            0,
+            1
+          ],
+          "raw_nonzero_pixels": 35,
+          "visible_pixel_count_threshold_16": 0,
+          "visible_bbox_in_rounded_cell": null
+        }
+      ]
+    }
+  ],
+  "unused_generation": {
+    "reason": "An alignment-only built-in image edit was tried once but not adopted because it did not fix dimensions/baselines and changed character appearance. It remains only at the built-in default output path.",
+    "file": "C:/Users/박도영/.codex/generated_images/01a18154-3778-7610-be3d-404684eb2028/exec-08841291-3d66-4ddf-b4fd-8057b4d23b2a.png",
+    "prompt": "Use case: precise-object-edit. Fix ONLY the production sprite sheet alignment of this SAME supplied coastal adult character atlas; keep the same sixteen body poses, same brown hat and teal shirt, same subdued colored pixel style, same small adult proportions and facing screen LEFT. Do not redesign or add objects.\nThe final PNG MUST be an exact 1024 by 1024 pixel square, four equal columns by four equal rows, each cell exactly 256x256, no trimming or crop of the whole sheet. Four walking poses on row0, four fishing-hands-only poses on row1, four gather-bend poses row2, four decorate-arm poses row3, preserve current order.\nALIGNMENT CORRECTION: In EVERY cell place the feet-ground anchor at local x=128 pixels, y=210 pixels, exactly 50% horizontal and 82% vertical. The currently supplied first three rows sit too low: lift their entire figures so the soles are at that y=210 anchor. Row3 also needs a slight lift. All boots must share the exact same soles baseline regardless of upper-body bending, no sprite scaling per row. Standing character height about 156 pixels with hat top around local y=54. Body scale must match exactly across all sixteen sprites. Preserve two planted feet in fishing, gather and decorate rows. Keep all transparent gutters and keep every pose within its cell.\nBACKGROUND CORRECTION: True transparent alpha, every empty pixel including all outer margins must have alpha EXACTLY zero, no semitransparent haze or faint opaque artifacts. Pixels belonging to character silhouettes may remain solid/crisp pixel art. No background, ground, shadow, rod, long stick, panel, label or text. Exact clean 4x4 export-ready sheet."
+  }
+}

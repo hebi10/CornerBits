@@ -5,6 +5,12 @@ import { encodeBackup, parseState, type AppState } from './core/state';
 export const desktop = isTauri();
 const previewKey = 'cornerbits.preview.state';
 
+export async function inspectState(): Promise<AppState | null> {
+  if (!desktop) return null;
+  const state = await invoke<AppState | null>('inspect_state');
+  return state === null ? null : parseState(JSON.stringify(state));
+}
+
 export async function loadState(): Promise<AppState | null> {
   if (desktop) {
     const state = await invoke<AppState | null>('load_state');

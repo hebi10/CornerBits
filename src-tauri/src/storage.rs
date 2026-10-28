@@ -493,6 +493,21 @@ impl Store {
         Self { root }
     }
 
+    /// Validate and normalize in memory without migrating or snapshotting files.
+    pub fn inspect(&self) -> Result<Option<AppState>, String> {
+        let path = self.root.join("state.json");
+        match fs::metadata(&path) {
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+            Err(error) => return Err(format!("저장 파일을 확인하지 못했습니다: {error}")),
+            Ok(_) => {}
+        }
+        let bytes = read_limited(&path)?;
+        let stored: StoredState = serde_json::from_slice(&bytes)
+            .map_err(|_| "저장 데이터가 손상되었거나 형식이 올바르지 않습니다.".to_owned())?;
+        let (state, _) = stored.normalize()?;
+        Ok(Some(state))
+    }
+
     pub fn load(&self) -> Result<Option<AppState>, String> {
         let path = self.root.join("state.json");
         match fs::metadata(&path) {
@@ -738,6 +753,85 @@ mod tests {
         value["schemaVersion"] = serde_json::json!(7);
         value["games"]["fishing"]["keepsakes"] = serde_json::json!([]);
         value
+    }
+
+    #[test]
+    fn inspect_normalizes_supported_versions_without_changing_files() {
+        let cases = [
+            serde_json::from_slice(legacy_bytes()).unwrap(),
+            populated_v2(),
+            populated_v3(),
+            populated_v4(),
+            populated_v5(),
+            populated_v6(),
+            populated_v7(),
+        ];
+        for original in cases {
+            let directory = tempdir().unwrap();
+            let store = Store::new(directory.path().to_owned());
+            let path = directory.path().join("state.json");
+            let bytes = serde_json::to_vec_pretty(&original).unwrap();
+            fs::write(&path, &bytes).unwrap();
+            let inspected = store.inspect().unwrap().unwrap();
+            assert_eq!(inspected.schema_version, 7);
+            assert_eq!(inspected.revision, original["revision"].as_u64().unwrap());
+            assert_eq!(
+                inspected.updated_at,
+                original["updatedAt"].as_str().unwrap()
+            );
+            assert_eq!(
+                serde_json::to_value(&inspected.settings).unwrap(),
+                original["settings"]
+            );
+            if original["schemaVersion"] == 1 {
+                assert_eq!(inspected.games, Games::default());
+            } else {
+                assert_eq!(inspected.games.mine.depth, 101);
+                assert_eq!(inspected.games.mine.coins, 234);
+                assert_eq!(inspected.games.mine.inventory[29], 1);
+                assert_eq!(inspected.games.garden.coins, 123);
+            }
+            if original["schemaVersion"].as_u64().unwrap() >= 3 {
+                assert_eq!(inspected.games.circuit.turns, 9);
+            }
+            if original["schemaVersion"].as_u64().unwrap() >= 5 {
+                assert_eq!(inspected.games.fishing.rod, 1);
+            }
+            assert_eq!(store.inspect().unwrap(), Some(inspected));
+            assert_eq!(fs::read(&path).unwrap(), bytes);
+            assert!(!directory.path().join("snapshots").exists());
+            assert_eq!(fs::read_dir(directory.path()).unwrap().count(), 1);
+        }
+    }
+
+    #[test]
+    fn inspect_preserves_missing_corrupt_unsupported_and_oversized_data() {
+        let directory = tempdir().unwrap();
+        let store = Store::new(directory.path().to_owned());
+        assert_eq!(store.inspect().unwrap(), None);
+        assert_eq!(fs::read_dir(directory.path()).unwrap().count(), 0);
+        let snapshots = directory.path().join("snapshots");
+        fs::create_dir(&snapshots).unwrap();
+        let existing = snapshots.join("existing.cornerbits");
+        fs::write(&existing, b"preserved backup").unwrap();
+        let mut unsupported = populated_v7();
+        unsupported["schemaVersion"] = serde_json::json!(8);
+        let mut zero = populated_v7();
+        zero["schemaVersion"] = serde_json::json!(0);
+        for original in [
+            b"{broken state".to_vec(),
+            serde_json::to_vec(&unsupported).unwrap(),
+            serde_json::to_vec(&zero).unwrap(),
+            vec![b' '; MAX_BYTES + 1],
+        ] {
+            let path = directory.path().join("state.json");
+            fs::write(&path, &original).unwrap();
+            assert!(store.inspect().is_err());
+            assert_eq!(fs::read(&path).unwrap(), original);
+            assert_eq!(fs::read(&existing).unwrap(), b"preserved backup");
+            assert_eq!(fs::read_dir(&snapshots).unwrap().count(), 1);
+            assert_eq!(fs::read_dir(directory.path()).unwrap().count(), 2);
+        }
     }
 
     #[test]

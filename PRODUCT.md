@@ -1,4 +1,4 @@
-# CornerBits
+# CornerBits · 해안 생활
 
 <!-- impeccable:product-schema 1 -->
 
@@ -6,38 +6,26 @@
 
 web
 
-Windows desktop application using a local web interface in Tauri.
+Windows desktop widget implemented with local React/Tauri. Above wallpaper and behind other applications, not in the taskbar or Alt+Tab. The current host size is280×380 logical pixels; compact is280×36.
 
-The user confirmed on 2026-10-28 that the app should behave as a desktop widget above wallpaper and behind other applications, without reserving desktop work area.
+## Approved direction
 
-## Stack
+On2026-10-28 the user rejected the prior three-game/monochrome design, chose a full rethink, then explicitly selected concept A: one colored pixel coastal place connecting fishing, gathering and home decoration. The immediate request is a live actual-size screen prototype, not the complete long-term economy.
 
-Tauri 2, React, TypeScript, Vite. User approved implementation of the proposed phase-one plan on 2026-10-28.
+The accepted reference is the left A scene in the generated concept board: a muted teal sea, ochre/rust roof, small timber home, large tree, dock, small boat and a tiny adult figure. Use a coherent place rather than tabs of unrelated games. Existing game rules are not requirements for the new concept.
 
-## Users
+## Current prototype
 
-People who want small, quiet, offline games at the edge of a Windows desktop.
+- Native default coast.html provides one transparent coastal scene, animated water glints, chimney smoke and an independently walking/acting person.
+- Dock: walk, fish, return; caught fish appear on a rack. Beach: walk, gather wood, return. Home: spend one gathered wood per flowerpot, lantern and bench, placed into the same scene.
+- Trips are short visual interactions, temporary within the session. Pause, document hiding, compact and the info view freeze progress. Reduced motion suppresses decoration and skips walk interpolation.
+- No new gameplay save schema, currency, daily quota or60-day pacing claim. Restart resets this prototype only. The info view must say so clearly.
+- Existing schema7 games, settings, backup tools, index.html and records remain preserved as legacy code. New scene actions never call saveState or restoreState. Native startup may read existing state; compact changes only the live window size.
 
-## Product Purpose
+## Constraints
 
-Three independent games with persistent growth: timing-based fishing, an offline growing garden, and probabilistic sword growth with a guaranteed alternative. Each game's major goals target about 60 days at 10–15 minutes per day. On 2026-10-28 the user approved replacing the mine and circuit with fishing and sword growth. Their old data stays archived in backups; they are not extra visible games.
+Existing React/TypeScript/Tauri/Vite and package manager. No new dependencies or remote services. Keep accessible hotspots, readable errors and system fonts. No large application panel, unnecessary cards, rounded UI, shadows or hover animations. Generated raster art and exact prompts/source paths remain preserved. Avoid Computer Use; native visual interaction is verified by the user.
 
-The v0.6.0 fishing loop is catching and holding fish, selling them for coins, buying better bait, collecting species, and permanently opening new fishing areas. The minimal scene is an angler in a small boat with location-specific scenery, visibly different equipment, and three collected fish that remain on display after sale. The user asked that the overall widget resemble a quiet pixel ornament at a glance.
+## Next decision
 
-## Capabilities and Constraints
-
-- Minimal monochrome pixel-art desktop game, replacing the earlier cute smiling ornament style at the user's latest request. Fish, plants, swords and utility icons have no anthropomorphic faces. Pixel-step motion and a Gulim-first font match the graphic style. Quiet picture controls and transparent surfaces dominate resting views; exact information lives in explicit tools and collections. Saving/error/recovery affordances remain available. No shadows, rounded cards, or unsolicited sound.
-- Growth, fishing bites, and sword upgrades should be visible in the art; exact names, odds and counts remain available in controls and collections. Honor reduced motion and pause hidden content.
-- Progress is tuned without daily limits. Use docs/balance.md: about58–60.46 modeled days at12.5 minutes per game, explicitly including bite/growth/polish waits. Fishing is73/58/48 days at10/12.5/15 minutes; the15-minute case is48 days, not a claim that every schedule takes60 days. Sword variance and player strategy affect completion. Garden seeds stay permanently unlocked.
-- Fishing holds caught fish until sale, preserving collection counts afterward. Free basic bait has a 7% rare-fish share; paid packs contain five baits for 50/150 coins with 12/27% rare-fish shares. Casting consumes one paid bait even on a miss. New regions require cumulative catch milestones plus four species from the preceding region and remain permanently open.
-- Fishing equipment1–8 reduces the next cast's bite wait by0.5 seconds per level and extends the reaction window from5 to12 seconds. Level1 waits18–30 seconds; level8 waits14.5–26.5 seconds. Existing saved casts keep their species, RNG, bite and expiry times unchanged. Thirty-six dedicated fish silhouettes, six landscapes and eight equipment images make collecting, traveling and upgrading visible.
-- Schema7 adds keepsakes: up to three unique collected fish indices, updated by each successful catch and preserved through sales/backups. Schema6 migration preserves every existing field and seeds display from discovered species indices in descending order; that order is not claimed to represent past catch recency. Schema5 keeps coins, collection, active cast, RNG and all other existing fields, while previously auto-paid catches do not become sale stock again and new trade inventories start empty. Original bytes must be snapshotted before migration, and snapshot failure must preserve the original save.
-- Preserve saved data outside the installation directory.
-- Backup and restore must validate input and preserve the current state before replacement.
-- No server, accounts, push, or publication in the current phase.
-
-## Product Principles
-
-- Interruptible play and trustworthy persistence.
-- Readable controls within a 280 by 380 logical-pixel window.
-- Corrupt data must produce a recovery message rather than a silent reset.
+Approve the actual-size motion and interaction feel before designing permanent progression, economy, collecting rules or migration for this new world.
