@@ -165,6 +165,6 @@ describe('fishing picture controls and confirmed feedback', () => {
     expect(html).toContain('aria-label="낚시터 고르기"');
     expect(html).toMatch(/<option value="5" disabled="">/);
     expect(html).toContain('0/1,500마리');
-    expect(html).toContain('fishing-art frame-8');
+    expect(html).toContain('fishing-angler-scene');
   });
 });

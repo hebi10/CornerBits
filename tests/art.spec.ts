@@ -5,7 +5,7 @@ import { saved } from './helpers';
 test('current game atlases load with real transparency', async ({ page }) => {
   await page.goto('/');
   await saved(page);
-  const assets = await page.evaluate(async () => Promise.all(['pixel-fishing-atlas.png','pixel-sword-atlas.png','pixel-garden-atlas.png','pixel-utility-atlas.png'].map(async name => {
+  const assets = await page.evaluate(async () => Promise.all(['pixel-angler-scenes.png','pixel-fishing-atlas.png','pixel-sword-atlas.png','pixel-garden-atlas.png','pixel-utility-atlas.png'].map(async name => {
     const image = new Image(); image.src = `/art/${name}`; await image.decode();
     const canvas = document.createElement('canvas'); canvas.width=image.width; canvas.height=image.height;
     const context=canvas.getContext('2d')!; context.drawImage(image,0,0);
@@ -19,7 +19,7 @@ test('current game atlases load with real transparency', async ({ page }) => {
 
 test('fishing motion pauses while hidden and reduced motion removes decoration', async ({page}) => {
   await page.goto('/');await saved(page);
-  const art=page.locator('.fishing-island');
+  const art=page.locator('.fishing-angler-scene');
   await expect(art).toHaveCSS('filter','grayscale(1)');
   await page.evaluate(() => {Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));});
   await expect(page.locator('.shell')).toHaveClass(/motion-paused/);

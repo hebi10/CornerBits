@@ -1,24 +1,13 @@
 .fishing { min-width: 0; }
 .fishing p, .fishing select, .fishing-tools-body button, .fishing-pages, .fishing-species > span:not(.game-art) { text-shadow: -1px 0 #f5f5f3, 1px 0 #f5f5f3, 0 -1px #f5f5f3, 0 1px #f5f5f3; }
-.fishing-place { margin: 0; text-align: center; font-size: 10px; line-height: 18px; }
-.fishing-main-action { display: block; position: relative; width: 232px; height: 145px; min-height: 0; margin: 0 auto; padding: 0; background: transparent; }
-.fishing-island { position: absolute; width: 135px; height: 135px; left: 5px; bottom: 2px; }
-.fishing-rod { position: absolute; width: 132px; height: 132px; right: 3px; top: 0; transform-origin: 28% 88%; }
-.fishing-line { position: absolute; top: 61px; right: 62px; width: 1px; height: 44px; background: #5a5a56; pointer-events: none; }
-.fishing-float { position: absolute; width: 48px; height: 48px; right: 39px; top: 90px; animation: fishing-float-sway 3.6s steps(1, end) infinite; }
-.fishing-biting .fishing-float { animation: fishing-float-bite 550ms steps(2, end) infinite; }
-.fishing-caught-art { position: absolute; width: 106px; height: 106px; right: 6px; bottom: 0; animation: fishing-catch-pop 450ms steps(3, end) both; }
-.fishing-upgrade-art { position: absolute; width: 94px; height: 94px; left: 67px; top: 35px; animation: fishing-catch-pop 450ms steps(3, end) both; }
-.fishing-status { min-height: 26px; margin: 0; text-align: center; font-size: 10px; line-height: 1.6; }
-.fishing-keepsakes { display: flex; align-items: center; justify-content: center; gap: 9px; height: 46px; }
-.fishing-aquarium { width: 46px; height: 46px; }
-.fishing-swimmers { display: flex; align-items: center; gap: 0; min-width: 90px; }
-.fishing-swimmer { display: inline-block; width: 30px; height: 34px; animation: fishing-friend-sway 4.2s steps(1, end) infinite; }
-.fishing-swimmer:nth-child(2) { animation-delay: -1.4s; }
-.fishing-swimmer:nth-child(3) { animation-delay: -2.8s; }
-.fishing-swimmer .game-art { width: 32px; height: 32px; }
-.fishing-upgrade { min-height: 0; width: 35px; height: 40px; padding: 0; }
-.fishing-upgrade .game-art { width: 34px; height: 34px; }
+.fishing-main-action { display: block; position: relative; width: 232px; height: 210px; min-height: 0; margin: 0 auto; padding: 0; background: transparent; }
+.fishing-angler-scene { display: block; width: 210px; height: 210px; margin: 0 auto; background-image: url('/art/pixel-angler-scenes.png'); background-size: 200% 200%; background-repeat: no-repeat; background-position: 0 0; image-rendering: pixelated; filter: grayscale(1); pointer-events: none; }
+.fishing-angler-scene[data-scene="waiting"] { background-position: 100% 0; transform: translateX(27px); }
+.fishing-angler-scene[data-scene="bite"] { background-position: 0 100%; transform: translateY(21px); animation: angler-bite 600ms steps(1, end) infinite; }
+.fishing-angler-scene[data-scene="catch"] { background-position: 100% 100%; transform: translate(27px, 21px); animation: angler-land 400ms steps(2, end) both; }
+.fishing-status { min-height: 24px; margin: 0; text-align: center; font-size: 10px; line-height: 1.6; }
+.fishing-upgrade { min-height: 0; width: 30px; height: 30px; padding: 0; }
+.fishing-upgrade .game-art { width: 29px; height: 29px; }
 .fishing-upgrade:disabled .game-art { opacity: .4; }
 .fishing-tools { margin-top: 1px; }
 .fishing-tools summary { display: flex; align-items: center; justify-content: center; width: 32px; height: 30px; margin-left: auto; cursor: pointer; list-style: none; }
@@ -26,7 +15,7 @@
 .fishing-tools summary .game-art { width: 29px; height: 29px; }
 .fishing:has(.fishing-tools[open]) .fishing-play { display: none; }
 .fishing-tools-body { display: flex; flex-direction: column; gap: 2px; padding: 0 3px; }
-.fishing-selectors { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.fishing-selectors { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 30px; gap: 4px; }
 .fishing-tool-select { display: flex; align-items: center; min-width: 0; gap: 3px; height: 25px; }
 .fishing-tool-select .game-art { width: 25px; height: 25px; }
 .fishing-tool-select select { width: 100%; min-width: 0; padding: 2px 3px; border: 0; background: transparent; color: #252525; font-size: 10px; }
@@ -43,8 +32,6 @@
 .fishing-help-toggle { align-self: center; min-height: 20px; padding: 1px 5px; font-size: 10px; }
 .fishing-help { display: flex; flex-direction: column; justify-content: center; gap: 6px; height: 119px; padding: 0 4px; }
 .fishing .fishing-help p { font-size: 10px; line-height: 1.6; word-break: keep-all; }
-@keyframes fishing-float-sway { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
-@keyframes fishing-float-bite { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
-@keyframes fishing-friend-sway { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
-@keyframes fishing-catch-pop { from { transform: translateY(9px); } to { transform: translateY(0); } }
+@keyframes angler-bite { 0%, 100% { background-position: 0 100%; transform: translateY(21px); } 50% { background-position: 100% 0; transform: translateX(27px); } }
+@keyframes angler-land { from { transform: translate(27px, 19px); } to { transform: translate(27px, 21px); } }
 @media (prefers-reduced-motion: reduce) { .fishing *, .fishing *::before, .fishing *::after { animation: none !important; transition: none !important; } }

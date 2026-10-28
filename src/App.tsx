@@ -271,7 +271,7 @@ export default function App() {
             <p className="description">광산·정원·전구 그림으로 세 게임을 바꿉니다. 그림에 마우스를 두면 설명이 나타납니다.</p>
             <p className="description">위쪽 제목을 끌어 위치를 옮기세요. 트레이의 ‘위젯 찾기’로 다시 볼 수 있습니다.</p>
             <p className="description">위쪽 화살표 상자는 백업 내보내기, 아래쪽 화살표 상자는 복원입니다. 세 게임의 진행도·도감·재화·설정을 함께 보관합니다.</p>
-            <span className="version">v0.4.1</span>
+            <span className="version">v0.4.2</span>
           </div>
         </details>
         {pendingBackup && <section className="restore-confirm" aria-label="복원 확인">

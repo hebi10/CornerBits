@@ -82,42 +82,27 @@ export default function Fishing({ state, disabled, onAction }: FishingProps) {
   const buttonLabel = state.cast === null ? '낚싯대 던지기' : expired ? '다시 낚싯대 던지기'
     : biting ? '낚싯줄 당기기, 입질 중' : '낚싯줄 당기기, 아직 입질을 기다리는 중';
   const status = state.cast === null ? feedback?.type === 'catch' ? `${feedback.discovered ? '신규 어종 · ' : ''}${FISH[feedback.species!]} · +${number.format(feedback.reward)} 코인`
-    : feedback?.type === 'miss' ? '낚시 실패 · 다시 던지기' : feedback?.type === 'upgrade' ? `낚싯대 ${state.rod}단계 강화 완료` : '낚싯대를 눌러 던지세요'
+    : feedback?.type === 'miss' ? '낚시 실패 · 다시 던지기' : feedback?.type === 'upgrade' ? `낚싯대 ${state.rod}단계 강화 완료` : ''
     : expired ? '입질 종료 · 다시 던지기' : biting ? '입질 · 지금 당기세요' : `입질 대기 · 약 ${seconds}초`;
+  const scene = state.cast !== null && !expired ? biting ? 'bite' : 'waiting' : feedback?.type === 'catch' ? 'catch' : 'idle';
 
   return <section className={`fishing${biting ? ' fishing-biting' : ''}`} aria-label="작은 낚시">
     <h1 className="sr-only">작은 낚시</h1>
     <div className="fishing-play">
-      <p className="fishing-place" title={`${locationNames[state.location]} · ${BAITS[state.bait]}`}>{locationNames[state.location]}</p>
+      <span className="sr-only">{locationNames[state.location]} · {BAITS[state.bait]}</span>
       <button type="button" className="fishing-main-action" aria-label={buttonLabel}
-        title={waiting ? '아직 기다리는 중이에요. 찌가 힘차게 움직일 때 눌러 주세요.' : buttonLabel}
+        title={`${locationNames[state.location]} · ${BAITS[state.bait]} · ${waiting ? '찌가 움직일 때 누르세요' : buttonLabel}`}
         disabled={disabled || (castLimit && (state.cast === null || expired))}
         onClick={() => act({ type: state.cast === null || expired ? 'cast' : 'hook' })}>
-        <Sprite atlas="fishing" frame={12} className="fishing-island" />
-        <Sprite atlas="fishing" frame={8} className="fishing-rod" />
-        {state.cast !== null && !expired && <>
-          <span className="fishing-line" />
-          <Sprite atlas="fishing" frame={biting ? 10 : 9} className="fishing-float" />
-        </>}
-        {feedback?.type === 'catch' && state.cast === null && <Sprite atlas="fishing" frame={feedback.species! % 6} className="fishing-caught-art" />}
-        {feedback?.type === 'upgrade' && <Sprite atlas="fishing" frame={15} className="fishing-upgrade-art" />}
+        <span className="fishing-angler-scene" data-scene={scene} aria-hidden="true" />
       </button>
       <p className="fishing-status" role="status" aria-live="polite">{status}</p>
-      <div className="fishing-keepsakes" title={`물고기 ${caughtSpecies.length}/36종 · 낚싯대 ${state.rod}/8단계`}>
-        <Sprite atlas="fishing" frame={caughtSpecies.length ? 6 : 7} className="fishing-aquarium" />
-        <div className="fishing-swimmers" aria-label={`만난 물고기 ${caughtSpecies.length}종`}>
-          {caughtSpecies.slice(-3).map((species) => <span className="fishing-swimmer" key={species} title={`${FISH[species]} · ${number.format(state.caught[species])}마리`}><Sprite atlas="fishing" frame={species % 6} /></span>)}
-        </div>
-        <button type="button" className="fishing-upgrade" aria-label={state.rod === 8 ? '낚싯대 최고 단계 8' : `낚싯대 강화 ${rodUpgradeCost(state.rod).toLocaleString('ko-KR')} 코인, 누적 ${rodUpgradeCatches(state.rod)}마리 필요`}
-          title={state.rod === 8 ? '최고 단계예요' : `다음 낚싯대 · ${number.format(rodUpgradeCost(state.rod))}코인 · ${number.format(state.totalCaught)}/${number.format(rodUpgradeCatches(state.rod))}마리`}
-          disabled={disabled || !canUpgradeRod(state)} onClick={() => act({ type: 'upgrade' })}><Sprite atlas="fishing" frame={15} /></button>
-      </div>
     </div>
     <details className="fishing-tools" onToggle={(event) => {
       setToolsOpen(event.currentTarget.open);
       if (event.currentTarget.open) { setPage(Math.floor(state.location * 6 / 8)); setShowHelp(false); }
     }}>
-      <summary aria-label="낚시 도구와 도감" title={toolsOpen ? '낚시터로 돌아가기' : '낚시 도구와 도감'}><Sprite atlas="fishing" frame={toolsOpen ? 8 : 14} /></summary>
+      <summary aria-label="낚시 도구와 도감" title={toolsOpen ? '낚시터로 돌아가기' : '낚시 도구와 도감'}><Sprite atlas={toolsOpen ? 'charms' : 'fishing'} frame={toolsOpen ? 15 : 14} /></summary>
       <div className="fishing-tools-body">
         <div className="fishing-selectors">
         <label className="fishing-tool-select"><Sprite atlas="fishing" frame={12} /><span className="sr-only">낚시터 고르기</span><select aria-label="낚시터 고르기" value={state.location} disabled={disabled || state.cast !== null} onChange={(event) => act({ type: 'location', index: Number(event.target.value) })}>
@@ -126,6 +111,9 @@ export default function Fishing({ state, disabled, onAction }: FishingProps) {
         <label className="fishing-tool-select"><Sprite atlas="fishing" frame={11} /><span className="sr-only">미끼 고르기</span><select aria-label="미끼 고르기" title={BAIT_HINTS[state.bait]} value={state.bait} disabled={disabled || state.cast !== null} onChange={(event) => act({ type: 'bait', index: Number(event.target.value) })}>
           {BAITS.map((name, index) => <option key={name} value={index}>{name}</option>)}
         </select></label>
+        <button type="button" className="fishing-upgrade" aria-label={state.rod === 8 ? '낚싯대 최고 단계 8' : `낚싯대 강화 ${rodUpgradeCost(state.rod).toLocaleString('ko-KR')} 코인, 누적 ${rodUpgradeCatches(state.rod)}마리 필요`}
+          title={state.rod === 8 ? '최고 단계' : `강화 · ${number.format(rodUpgradeCost(state.rod))}코인 · ${number.format(state.totalCaught)}/${number.format(rodUpgradeCatches(state.rod))}마리`}
+          disabled={disabled || !canUpgradeRod(state)} onClick={() => act({ type: 'upgrade' })}><Sprite atlas="fishing" frame={15} /></button>
         </div>
         <p className="fishing-record" title={`${number.format(state.coins)} 코인`}>도감 {caughtSpecies.length}/36 · 낚싯대 {state.rod}/8 · {compact.format(state.coins)} 코인</p>
         <p className="fishing-goal" title={`누적 ${number.format(state.totalCaught)}마리 · 연속 ${state.streak}마리 · 최고 연속 ${state.bestStreak}마리`}>{isFishingComplete(state) ? '낚시 주요 목표 달성' : `수집 목표 · ${compact.format(state.totalCaught)}/${number.format(FISHING_GOAL)}마리`}</p>

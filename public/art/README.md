@@ -13,3 +13,5 @@ CSS 배경 위치로 각 칸을 표시하며 원본 투명도를 보존합니다
 v0.4.0은 내장 이미지 생성 기능으로 `fishing-atlas.png`와 `sword-atlas.png`를 새로 생성했습니다. `companions-prompts.json`과 PNG 메타데이터에 정확한 프롬프트를 보존했습니다. 낚시0~5는36종을 표현하는6개 물고기군,6~7어항,8낚싯대,9~10찌,11미끼,12낚시터,13보상,14그물,15강화 낚싯대입니다. 검0~9는성장 외형10종,10숫돌,11망치,12조각,13광석주머니,14안정룬,15받침대입니다. 두 atlas는4×4이며 alpha를 유지하고 원본 생성 파일도 남겼습니다.
 
 v0.4.1은 귀여운 얼굴/장난감 느낌을 제거하는 사용자 요청에 따라 `pixel-fishing-atlas.png`, `pixel-sword-atlas.png`, `pixel-garden-atlas.png`, `pixel-utility-atlas.png`를 생성했습니다. 현재 화면은 이 네 자산을 사용하며 모두4×4 프레임 계약과 투명 알파를 유지합니다. 낚시/검의 초기 생성 및 정사각 재배치 편집 프롬프트는 `pixel-main-prompts.json`, 정원/도구의 생성 프롬프트는 `pixel-support-prompts.json`과 각 PNG 메타데이터에 보존했습니다. CSS는 pixelated로 렌더링하며, 어항은 위쪽 이웃 프레임이 비치지 않도록 그림이 없는 상단 여백만 제외합니다. 이전 PNG와 생성 원본은 보존했습니다.
+
+v0.4.2는 `pixel-angler-scenes.png`를 추가해 낚시 메인을 단순한 낚시꾼 장면으로 바꿨습니다.2×2·1254×1254·실제alpha이며 순서는idle/waiting/bite/catch입니다. 인물과 벤치 위치는 CSS의 상태별 정수 offset으로 맞췄습니다. `pixel-angler-prompts.json`과 PNG 메타데이터에 생성/편집 프롬프트를 보존했습니다. 기존낚시atlas는메뉴/도감에서계속사용하며,어항그림은메인에서제외돼기존어항용CSSclip도제거했습니다.
