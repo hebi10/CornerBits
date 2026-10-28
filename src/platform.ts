@@ -64,12 +64,9 @@ export async function restoreState(state: AppState): Promise<void> {
 export async function applyWindow(settings: AppState['settings']): Promise<void> {
   if (!desktop) return;
   const window = getCurrentWindow();
-  await window.setAlwaysOnTop(settings.alwaysOnTop);
+  // Legacy alwaysOnTop stays in backups, but desktop placement belongs to the
+  // native widget controller. Restoring an old backup must not raise the widget.
   await window.setSize(new LogicalSize(280, settings.compact ? 36 : 380));
-}
-
-export async function minimizeWindow(): Promise<void> {
-  if (desktop) await getCurrentWindow().minimize();
 }
 
 export async function closeWindow(): Promise<void> {

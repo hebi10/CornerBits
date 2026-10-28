@@ -1,7 +1,7 @@
 [package]
 name = "cornerbits"
-version = "0.1.0"
-description = "CornerBits desktop mini mine and garden"
+version = "0.1.1"
+description = "CornerBits desktop widget mini mine and garden"
 edition = "2021"
 rust-version = "1.90"
 
@@ -24,7 +24,7 @@ tauri-plugin-dialog = "2"
 tauri-plugin-single-instance = "2"
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.61", features = ["Win32_Storage_FileSystem"] }
+windows-sys = { version = "0.61", features = ["Win32_Storage_FileSystem", "Win32_UI_WindowsAndMessaging", "Win32_UI_Shell", "Win32_UI_Accessibility", "Win32_Graphics_Dwm"] }
 
 [dev-dependencies]
 tempfile = "3"

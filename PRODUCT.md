@@ -8,6 +8,8 @@ web
 
 Windows desktop application using a local web interface in Tauri.
 
+The user confirmed on 2026-10-28 that the app should behave as a desktop widget above wallpaper and behind other applications, without reserving desktop work area.
+
 ## Stack
 
 Tauri 2, React, TypeScript, Vite. User approved implementation of the proposed phase-one plan on 2026-10-28.

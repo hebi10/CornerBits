@@ -213,7 +213,6 @@ export default function App() {
         {compact && <span className="compact-status" role="status" aria-live="polite">{saveStatus}</span>}
         <div className="window-actions">
           <button className="window-button" type="button" aria-label={compact ? '펼치기' : '막대로 축소'} disabled={!ready || !state || busy || !!pendingBackup} onClick={() => void runOperation(() => changeSetting('compact', !compact))}>{compact ? '펼침' : '축소'}</button>
-          {platform.desktop && <button className="window-button" aria-label="최소화" onClick={() => void platform.minimizeWindow().catch((cause) => setError(errorMessage(cause)))}>−</button>}
           {platform.desktop && <button className="window-button" aria-label="종료" onClick={() => void platform.closeWindow().catch((cause) => setError(errorMessage(cause)))}>×</button>}
         </div>
       </header>
@@ -233,11 +232,11 @@ export default function App() {
         {state && screen === 'garden' && <Garden state={state.games.garden} disabled={gameDisabled} onAction={(action) => void runOperation(() => play('garden', action))} />}
         {!state && screen !== 'manage' && <p className="description">{ready ? '기록을 확인할 수 없습니다. 관리 화면에서 백업을 복원해 주세요.' : '기록을 불러오고 있습니다.'}</p>}
         {screen === 'manage' && <>
-        <div className="page-heading"><h1>데이터 관리</h1><span className="version">v0.1.0</span></div>
-        <fieldset disabled={!ready || !state || busy || !!pendingBackup}>
-          <legend className="sr-only">창 설정</legend>
-          <label className="setting-row"><span>항상 위에 표시</span><input type="checkbox" checked={state?.settings.alwaysOnTop ?? false} onChange={(event) => { const checked = event.target.checked; void runOperation(() => changeSetting('alwaysOnTop', checked)); }} /></label>
-        </fieldset>
+        <div className="page-heading"><h1>데이터 관리</h1><span className="version">v0.1.1</span></div>
+        <section className="widget-info" aria-label="위젯 배치">
+          <p className="section-label">바탕화면 위젯</p>
+          <p className="description">다른 프로그램 뒤에 머뭅니다.<br />위쪽 제목을 끌어 위치를 옮기세요.<br />트레이에서 ‘위젯 찾기’를 누르면 다시 보입니다.</p>
+        </section>
         <section className="backup-section" aria-label="백업 관리">
           <p className="section-label">기록 보관</p>
           <p className="description">게임 진행도와 설정을 자동 저장합니다.<br />두 게임의 도감·재화도 백업에 포함됩니다.</p>
@@ -262,7 +261,7 @@ export default function App() {
           <div className="confirm-actions"><button type="button" className="primary" disabled={busy} onClick={() => void runOperation(confirmRestore)}>이 백업으로 복원</button><button type="button" disabled={busy} onClick={() => setPendingBackup(null)}>취소</button></div>
         </section>}
         </>}
-        <footer>{platform.desktop ? '이 PC에 저장 · 오프라인' : '브라우저 미리보기 · 이 브라우저에만 저장'}</footer>
+        <footer>{platform.desktop ? '바탕화면 위젯 · 이 PC에 자동 저장' : '브라우저 미리보기 · 이 브라우저에만 저장'}</footer>
       </main>}
       {compact && (error || saveFailed) && <button className="compact-error" aria-label="저장 오류 확인하고 펼치기" onClick={() => void runOperation(() => changeSetting('compact', false))}>저장 확인</button>}
     </div>

@@ -1,5 +1,6 @@
 use crate::{
     commands::{self, NativeStore},
+    desktop_widget,
     position::{self, Bounds, Point},
     storage::Store,
 };
@@ -12,9 +13,9 @@ struct NormalWindowPosition(Mutex<Option<Point>>);
 
 fn show_main(app: &tauri::AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
-        let _ = window.show();
-        let _ = window.unminimize();
-        let _ = window.set_focus();
+        if let Err(error) = desktop_widget::reveal(&window) {
+            report_native_error(&window, error);
+        }
     }
 }
 
@@ -133,9 +134,8 @@ pub fn run() {
                 380
             };
             window.set_size(LogicalSize::new(280.0, f64::from(height)))?;
-            if let Some(settings) = initial_settings {
-                window.set_always_on_top(settings.always_on_top)?;
-            }
+            // alwaysOnTop remains in saved v1/v2 data for backup compatibility;
+            // desktop widgets always use their desktop-layer placement policy.
             match saved_position {
                 Ok(Some(point)) => {
                     let monitors = window
@@ -161,7 +161,8 @@ pub fn run() {
                 Err(error) => report_native_error(&window, error),
             }
             track_normal_position(&window).map_err(std::io::Error::other)?;
-            let show = MenuItem::with_id(app, "show", "CornerBits 열기", true, None::<&str>)?;
+            desktop_widget::install(&window).map_err(std::io::Error::other)?;
+            let show = MenuItem::with_id(app, "show", "위젯 찾기", true, None::<&str>)?;
             let exit = MenuItem::with_id(app, "exit", "종료", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show, &exit])?;
             TrayIconBuilder::with_id("cornerbits")

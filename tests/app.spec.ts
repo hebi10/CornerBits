@@ -4,46 +4,44 @@ async function manage(page: import('@playwright/test').Page) {
   await page.getByRole('button', { name: '관리', exact: true }).click();
 }
 
-test('settings autosave survives reload and an exported backup restores them', async ({ page }) => {
+test('backup cancellation keeps current progress and confirmation restores the exported progress', async ({ page }) => {
   await page.goto('/');
-  await manage(page);
-  await expect(page.getByRole('heading', { name: '데이터 관리' })).toBeVisible();
-  const pinned = page.getByRole('checkbox', { name: '항상 위에 표시' });
-  await pinned.check();
+  const tile = page.getByRole('button', { name: /^1번.*내구도/ });
+  await tile.click();
   await expect(page.getByRole('status')).toContainText('저장 완료');
   await page.reload();
+  await expect(tile).toHaveAttribute('aria-label', /내구도 1\/2/);
   await manage(page);
-  await expect(pinned).toBeChecked();
 
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: '백업 내보내기' }).click();
   const download = await downloadPromise;
   const backupPath = await download.path();
   expect(download.suggestedFilename()).toMatch(/\.cornerbits$/);
-  await pinned.uncheck();
+  await page.getByRole('button', { name: '광산', exact:true }).click();
+  await tile.click();
   await expect(page.getByRole('status')).toContainText('저장 완료');
+  await manage(page);
   await page.locator('input[type=file]').setInputFiles(backupPath!);
   await expect(page.getByRole('button', { name: '이 백업으로 복원' })).toBeVisible();
   await page.getByRole('button', { name: '취소', exact: true }).click();
-  await expect(pinned).not.toBeChecked();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('cornerbits.preview.state')!).games.mine.tiles[0])).toBe(0);
   await page.locator('input[type=file]').setInputFiles(backupPath!);
   await page.getByRole('button', { name: '이 백업으로 복원' }).click();
-  await expect(pinned).toBeChecked();
+  await expect(page.getByRole('status')).toContainText('저장 완료');
   await page.reload();
-  await manage(page);
-  await expect(pinned).toBeChecked();
+  await expect(tile).toHaveAttribute('aria-label', /내구도 1\/2/);
 });
 
-test('invalid backups do not overwrite current settings', async ({ page }) => {
+test('invalid backups do not overwrite current progress', async ({ page }) => {
   await page.goto('/');
-  await manage(page);
-  await page.getByRole('checkbox', { name: '항상 위에 표시' }).check();
+  await page.getByRole('button', { name: /^1번.*내구도/ }).click();
   await expect(page.getByRole('status')).toContainText('저장 완료');
+  await manage(page);
   await page.locator('input[type=file]').setInputFiles({ name: 'invalid.cornerbits', mimeType: 'application/json', buffer: Buffer.from('{"backupVersion":999}') });
   await expect(page.getByRole('alert')).toBeVisible();
   await page.reload();
-  await manage(page);
-  await expect(page.getByRole('checkbox', { name: '항상 위에 표시' })).toBeChecked();
+  await expect(page.getByRole('button', { name: /^1번.*내구도/ })).toHaveAttribute('aria-label', /내구도 1\/2/);
 });
 
 test('compact mode is reversible and fits the small window', async ({ page }) => {
@@ -77,9 +75,10 @@ test('restoring a backup with the maximum revision remains readable after change
   await page.locator('input[type=file]').setInputFiles({ name: 'max.cornerbits', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(backup)) });
   await page.getByRole('button', { name: '이 백업으로 복원' }).click();
   await page.reload();
-  await manage(page);
-  await expect(page.getByRole('checkbox', { name: '항상 위에 표시' })).toBeChecked();
-  await page.getByRole('checkbox', { name: '항상 위에 표시' }).uncheck();
+  await expect(page.getByRole('status')).toContainText('저장 완료');
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('cornerbits.preview.state')!).settings.alwaysOnTop)).toBe(true);
+  await page.getByRole('button', { name: '막대로 축소' }).click();
+  await page.getByRole('button', { name: '펼치기' }).click();
   await expect(page.getByRole('status')).toContainText('저장 완료');
   await page.reload();
   await manage(page);
@@ -98,8 +97,10 @@ test('save failures stay recoverable after opening and cancelling restore', asyn
     };
     sessionStorage.setItem('fail-save', 'yes');
   });
-  await page.getByRole('checkbox', { name: '항상 위에 표시' }).check();
+  await page.getByRole('button', { name: '광산', exact:true }).click();
+  await page.getByRole('button', { name: /^1번.*내구도/ }).click();
   await expect(page.getByRole('button', { name: '저장 다시 시도' })).toBeVisible();
+  await manage(page);
   const state = { schemaVersion: 1, revision: 0, updatedAt: '2026-10-28T01:00:00.000Z', settings: { alwaysOnTop: false, compact: false } };
   const backup = { format: 'CornerBits', backupVersion: 1, exportedAt: state.updatedAt, state };
   await page.locator('input[type=file]').setInputFiles({ name: 'valid.cornerbits', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(backup)) });
@@ -109,6 +110,5 @@ test('save failures stay recoverable after opening and cancelling restore', asyn
   await page.getByRole('button', { name: '저장 다시 시도' }).click();
   await expect(page.getByRole('status')).toContainText('저장 완료');
   await page.reload();
-  await manage(page);
-  await expect(page.getByRole('checkbox', { name: '항상 위에 표시' })).toBeChecked();
+  await expect(page.getByRole('button', { name: /^1번.*내구도/ })).toHaveAttribute('aria-label', /내구도 1\/2/);
 });
