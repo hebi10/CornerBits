@@ -228,12 +228,20 @@ describe('garden controls', () => {
     expect(confirmedGardenFeedback(before, initialGarden(), action)).toBeNull();
     expect(confirmedGardenFeedback(before, before, action)).toBeNull();
     const html = renderToStaticMarkup(createElement(Garden, { state: before, disabled: false, onAction: () => undefined }));
-    expect(html).toMatch(/garden-pot-action">수확 \+1<\/span>/);
+    expect(html).toContain('title="1번 화분 새싹 수확 · +1 코인"');
   });
 
   it('counts harvested species separately from free seeds available for planting', () => {
     const html = renderToStaticMarkup(createElement(Garden, { state: initialGarden(), disabled: false, onAction: () => undefined }));
     expect(html.replace(/<[^>]*>/g, '')).toContain('도감 0/40');
+  });
+
+  it('uses picture-only pots while keeping the first free seed action accessible', () => {
+    const html = renderToStaticMarkup(createElement(Garden, { state: initialGarden(), disabled: false, onAction: () => undefined }));
+    const pots = html.match(/<button\b[^>]*class="garden-pot[^\"]*"[^>]*>[\s\S]*?<\/button>/g) ?? [];
+    expect(pots).toHaveLength(3);
+    expect(pots.every((pot) => pot.replace(/<[^>]*>/g, '').trim() === '')).toBe(true);
+    expect(html).toContain('aria-label="1번 화분 새싹 심기"');
   });
 
   it('shows seed, sprout, leafy and mature illustrations from elapsed growth', () => {
@@ -246,6 +254,7 @@ describe('garden controls', () => {
       const frames = [...html.matchAll(/garden-art frame-(\d+) garden-pot-art/g)].map((match) => Number(match[1]));
       expect(frames).toEqual([1, 2, 3, 8]);
       expect(html).toContain('4번 화분 새싹 수확');
+      expect(html.match(/garden-water-mark/g)).toHaveLength(3);
     } finally {
       clock.mockRestore();
     }

@@ -43,7 +43,7 @@ test('legacy save migration preserves the original and settings', async ({ page 
   await page.evaluate((value) => localStorage.setItem('cornerbits.preview.state', value), JSON.stringify(legacy));
   await page.reload();
   const state = await saved(page);
-  expect(state.schemaVersion).toBe(2);
+  expect(state.schemaVersion).toBe(3);
   expect(state.settings).toEqual(legacy.settings);
   const originals = await page.evaluate(() => Object.keys(localStorage).filter((key) => key.startsWith('cornerbits.preview.pre-migration.')).map((key) => localStorage.getItem(key)));
   expect(originals).toEqual([JSON.stringify(legacy)]);
@@ -109,7 +109,7 @@ test('legacy restore warns that games restart and cancellation preserves progres
   const legacy = { schemaVersion: 1, revision: 3, updatedAt: before.updatedAt, settings: before.settings };
   await page.getByRole('button', { name: '관리', exact: true }).click();
   await page.locator('input[type=file]').setInputFiles({ name: 'legacy.cornerbits', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({format:'CornerBits',backupVersion:1,exportedAt:before.updatedAt,state:legacy})) });
-  await expect(page.getByText('1단계 설정 백업입니다. 복원하면 두 게임 진행도가 처음 상태로 바뀝니다.')).toBeVisible();
+  await expect(page.getByText('1단계 설정 백업입니다. 복원하면 세 게임 진행도가 처음 상태로 바뀝니다.')).toBeVisible();
   await page.getByRole('button', { name: '취소', exact: true }).click();
   expect((await saved(page)).games).toEqual(before.games);
 });

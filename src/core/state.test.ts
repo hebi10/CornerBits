@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { decodeBackup, encodeBackup, initialState, parseState, SaveQueue, type AppState } from './state';
+import { initialCircuit } from '../games/circuit';
 
 const savedState: AppState = {
   ...initialState(),
-  schemaVersion: 2,
+  schemaVersion: 3,
   revision: 12,
   updatedAt: '2026-10-28T02:30:00.000Z',
   settings: { alwaysOnTop: true, compact: false },
@@ -28,21 +29,30 @@ function revision(value: number): AppState {
 }
 
 describe('phase two compatibility', () => {
+  it('upgrades version two while retaining both games and adding an independent circuit', () => {
+    const legacy = JSON.parse(readFileSync(new URL('../../tests/fixtures/phase-two.cornerbits', import.meta.url), 'utf8')).state;
+    const upgraded = parseState(JSON.stringify(legacy));
+    expect(upgraded).toMatchObject({ schemaVersion: 3, revision: legacy.revision, updatedAt: legacy.updatedAt, settings: legacy.settings });
+    expect(upgraded.games.mine).toEqual(legacy.games.mine);
+    expect(upgraded.games.garden).toEqual(legacy.games.garden);
+    expect(upgraded.games).toHaveProperty('circuit', expect.objectContaining({ stage: 1, turns: 0, totalClears: 0, records: Array(300).fill(0) }));
+  });
   it('roundtrips the same populated game fixture used by the native store', () => {
     const text = readFileSync(new URL('../../tests/fixtures/phase-two.cornerbits', import.meta.url), 'utf8');
     const state = decodeBackup(text);
-    expect(state).toEqual(JSON.parse(text).state);
+    const original = JSON.parse(text).state;
+    expect(state).toEqual({ ...original, schemaVersion: 3, games: { ...original.games, circuit: initialCircuit() } });
     expect(decodeBackup(encodeBackup(state))).toEqual(state);
   });
   it('migrates legacy settings and backups to independent empty games', () => {
     const legacy = { schemaVersion: 1, revision: 7, updatedAt: '2026-10-28T01:00:00Z', settings: { alwaysOnTop: true, compact: false } };
     const migrated = parseState(JSON.stringify(legacy));
-    expect(migrated).toMatchObject({ schemaVersion: 2, revision: 7, settings: legacy.settings, games: { mine: { depth: 1, totalMined: 0 }, garden: { pots: [null, null, null], totalHarvests: 0 } } });
+    expect(migrated).toMatchObject({ schemaVersion: 3, revision: 7, settings: legacy.settings, games: { mine: { depth: 1, totalMined: 0 }, garden: { pots: [null, null, null], totalHarvests: 0 } } });
     expect(decodeBackup(JSON.stringify({ ...backup, state: legacy }))).toEqual(migrated);
   });
 
-  it('creates version two game progress for a new installation', () => {
-    expect(initialState()).toMatchObject({ schemaVersion: 2, games: { mine: { tiles: Array(25).fill(2) }, garden: { harvested: Array(40).fill(0) } } });
+  it('creates version three game progress for a new installation', () => {
+    expect(initialState()).toMatchObject({ schemaVersion: 3, games: { mine: { tiles: Array(25).fill(2) }, garden: { harvested: Array(40).fill(0) } } });
   });
 
   it('captures nested game arrays and planted pots before queued writes', async () => {
@@ -55,8 +65,23 @@ describe('phase two compatibility', () => {
     source.games.mine.tiles[0] = 0;
     source.games.mine.inventory[0] = 9;
     source.games.garden.pots[0].watered = true;
+    source.games.circuit.rotations[0] = 0;
+    source.games.circuit.records[0] = 12;
     await saving;
     expect(writes[0]).toMatchObject({ games: { mine: { tiles: Array(25).fill(2), inventory: Array(30).fill(0) }, garden: { pots: [{ species: 0, plantedAt: 1, watered: false }, null, null] } } });
+    expect(writes[0]).toMatchObject({ games: { circuit: initialCircuit() } });
+  });
+  it('rejects mixed-version game keys instead of dropping progress', () => {
+    const current = initialState();
+    expect(() => parseState(JSON.stringify({ ...current, schemaVersion: 2 }))).toThrow();
+    expect(() => parseState(JSON.stringify({ ...current, games: { mine: current.games.mine, garden: current.games.garden } }))).toThrow();
+  });
+  it('roundtrips the populated version three fixture also read by Rust', () => {
+    const text = readFileSync(new URL('../../tests/fixtures/phase-three.cornerbits', import.meta.url), 'utf8');
+    const state = decodeBackup(text);
+    expect(state).toEqual(JSON.parse(text).state);
+    expect(state.games.circuit.rotations).toHaveLength(25);
+    expect(decodeBackup(encodeBackup(state))).toEqual(state);
   });
 });
 
@@ -65,7 +90,7 @@ describe('initialState', () => {
     const before = Date.now();
     const state = initialState();
     expect(state).toEqual({
-      schemaVersion: 2,
+      schemaVersion: 3,
       games: initialState().games,
       revision: 0,
       updatedAt: expect.any(String),
@@ -84,7 +109,7 @@ describe('state validation', () => {
   });
 
   it.each([
-    { label: 'future schema', value: { ...savedState, schemaVersion: 3 } },
+    { label: 'future schema', value: { ...savedState, schemaVersion: 4 } },
     { label: 'string schema', value: { ...savedState, schemaVersion: '1' } },
     { label: 'negative revision', value: { ...savedState, revision: -1 } },
     { label: 'fractional revision', value: { ...savedState, revision: 1.5 } },
@@ -153,7 +178,7 @@ describe('backup format', () => {
   it.each([
     { label: 'another app', value: { ...backup, format: 'OtherApp' } },
     { label: 'future backup version', value: { ...backup, backupVersion: 2 } },
-    { label: 'future state schema', value: { ...backup, state: { ...savedState, schemaVersion: 3 } } },
+    { label: 'future state schema', value: { ...backup, state: { ...savedState, schemaVersion: 4 } } },
     { label: 'invalid export timestamp', value: { ...backup, exportedAt: '2026-02-30T00:00:00Z' } },
     { label: 'missing app identifier', value: { backupVersion: 1, exportedAt: backup.exportedAt, state: savedState } },
     { label: 'unknown backup field', value: { ...backup, extra: true } },

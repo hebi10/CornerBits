@@ -8,6 +8,9 @@ import Mine from './games/Mine.tsx';
 import Garden from './games/Garden.tsx';
 import { reduceMine, type MineAction } from './games/mine';
 import { reduceGarden, type GardenAction } from './games/garden';
+import Circuit from './games/Circuit.tsx';
+import { reduceCircuit, type CircuitAction } from './games/circuit';
+import { Sprite } from './games/Art';
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -27,8 +30,8 @@ export default function App() {
   const [error, setError] = useState('');
   const [note, setNote] = useState('');
   const [pendingBackup, setPendingBackup] = useState<AppState | null>(null);
-  const [legacyBackup, setLegacyBackup] = useState(false);
-  const [screen, setScreen] = useState<'mine' | 'garden' | 'manage'>('mine');
+  const [backupSchema, setBackupSchema] = useState(3);
+  const [screen, setScreen] = useState<'mine' | 'garden' | 'circuit' | 'manage'>('mine');
   const [visible, setVisible] = useState(() => !document.hidden);
   const [saveFailed, setSaveFailed] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -141,12 +144,13 @@ export default function App() {
     }
   }
 
-  async function play(game: 'mine' | 'garden', action: MineAction | GardenAction) {
+  async function play(game: 'mine' | 'garden' | 'circuit', action: MineAction | GardenAction | CircuitAction) {
     const current = stateRef.current;
     if (!ready || !current || pendingBackup || saveFailed) return;
     const games = game === 'mine'
       ? { ...current.games, mine: reduceMine(current.games.mine, action as MineAction) }
-      : { ...current.games, garden: reduceGarden(current.games.garden, action as GardenAction, Date.now()) };
+      : game === 'garden' ? { ...current.games, garden: reduceGarden(current.games.garden, action as GardenAction, Date.now()) }
+      : { ...current.games, circuit: reduceCircuit(current.games.circuit, action as CircuitAction) };
     if (games[game] === current.games[game]) return;
     setError('');
     setNote('');
@@ -178,7 +182,7 @@ export default function App() {
     setPendingBackup(null);
     try {
       const decoded = decodeBackup(text);
-      setLegacyBackup(JSON.parse(text).state.schemaVersion === 1);
+      setBackupSchema(JSON.parse(text).state.schemaVersion);
       setPendingBackup(decoded);
     }
     catch (cause) { setError(`이 파일을 복원할 수 없습니다. ${errorMessage(cause)} 현재 기록은 변경하지 않았습니다.`); }
@@ -214,20 +218,21 @@ export default function App() {
   const compact = state?.settings.compact ?? false;
   const gameDisabled = !ready || !state || busy || !!pendingBackup || saveFailed;
   return (
-    <div className={`shell${compact ? ' compact' : screen === 'manage' ? '' : ' shell-game'}${!visible ? ' motion-paused' : ''}`}>
+    <div className={`shell${compact ? ' compact' : ` shell-game${screen === 'manage' ? ' shell-manage' : ''}`}${!visible ? ' motion-paused' : ''}`}>
       <header className="titlebar">
         <span className="brand" data-tauri-drag-region><span data-tauri-drag-region>CornerBits</span></span>
         {compact && <span className="compact-status" role="status" aria-live="polite">{saveStatus}</span>}
         <div className="window-actions">
-          <button className="window-button" type="button" aria-label={compact ? '펼치기' : '막대로 축소'} disabled={!ready || !state || busy || !!pendingBackup} onClick={() => void runOperation(() => changeSetting('compact', !compact))}>{compact ? '펼침' : '축소'}</button>
+          <button className="window-button" type="button" title={compact ? '펼치기' : '막대로 축소'} aria-label={compact ? '펼치기' : '막대로 축소'} disabled={!ready || !state || busy || !!pendingBackup} onClick={() => void runOperation(() => changeSetting('compact', !compact))}>{compact ? '펼침' : <Sprite atlas="charms" frame={15} />}</button>
           {platform.desktop && <button className="window-button" aria-label="종료" onClick={() => void platform.closeWindow().catch((cause) => setError(errorMessage(cause)))}>×</button>}
         </div>
       </header>
       {!compact && <main>
         <nav className="game-nav" aria-label="화면 선택">
-          <button type="button" aria-pressed={screen === 'mine'} disabled={busy || !!pendingBackup} onClick={() => setScreen('mine')}>광산</button>
-          <button type="button" aria-pressed={screen === 'garden'} disabled={busy || !!pendingBackup} onClick={() => setScreen('garden')}>정원</button>
-          <button type="button" aria-pressed={screen === 'manage'} disabled={busy || !!pendingBackup} onClick={() => setScreen('manage')}>관리</button>
+          <button type="button" aria-label="광산" title="광산 친구들" aria-pressed={screen === 'mine'} disabled={busy || !!pendingBackup} onClick={() => setScreen('mine')}><Sprite atlas="mine" frame={0} /></button>
+          <button type="button" aria-label="정원" title="정원 친구들" aria-pressed={screen === 'garden'} disabled={busy || !!pendingBackup} onClick={() => setScreen('garden')}><Sprite atlas="garden" frame={6} /></button>
+          <button type="button" aria-label="회로" title="전구 친구들 · 회로 연결" aria-pressed={screen === 'circuit'} disabled={busy || !!pendingBackup} onClick={() => setScreen('circuit')}><Sprite atlas="charms" frame={1} /></button>
+          <button type="button" aria-label="관리" title="기록 보관함" aria-pressed={screen === 'manage'} disabled={busy || !!pendingBackup} onClick={() => setScreen('manage')}><Sprite atlas="charms" frame={4} /></button>
         </nav>
         <section className="save-summary" aria-label="저장 상태">
           <span className="save-state" role="status" aria-live="polite" title={state ? `마지막 저장 ${dateLabel(state.updatedAt)}` : undefined}>{saveStatus}</span>
@@ -237,19 +242,16 @@ export default function App() {
         {note && <p className="message" aria-live="polite">{note}</p>}
         {state && screen === 'mine' && <Mine state={state.games.mine} disabled={gameDisabled} onAction={(action) => void runOperation(() => play('mine', action))} />}
         {state && screen === 'garden' && <Garden state={state.games.garden} disabled={gameDisabled} onAction={(action) => void runOperation(() => play('garden', action))} />}
+        {state && screen === 'circuit' && <Circuit state={state.games.circuit} disabled={gameDisabled} onAction={(action) => void runOperation(() => play('circuit', action))} />}
         {!state && screen !== 'manage' && <p className="description">{ready ? '기록을 확인할 수 없습니다. 관리 화면에서 백업을 복원해 주세요.' : '기록을 불러오고 있습니다.'}</p>}
         {screen === 'manage' && <>
-        <div className="page-heading"><h1>데이터 관리</h1><span className="version">v0.1.3</span></div>
-        <section className="widget-info" aria-label="위젯 배치">
-          <p className="section-label">바탕화면 위젯</p>
-          <p className="description">다른 프로그램 뒤에 머뭅니다.<br />위쪽 제목을 끌어 위치를 옮기세요.<br />트레이에서 ‘위젯 찾기’를 누르면 다시 보입니다.</p>
-        </section>
+        <h1 className="sr-only">데이터 관리</h1>
         <section className="backup-section" aria-label="백업 관리">
-          <p className="section-label">기록 보관</p>
-          <p className="description">게임 진행도와 설정을 자동 저장합니다.<br />두 게임의 도감·재화도 백업에 포함됩니다.</p>
+          <Sprite atlas="charms" frame={4} className="keepsake-art" />
+          <p className="keepsake-caption">세 친구의 기록 보관함</p>
           <div className="backup-actions">
-            <button type="button" disabled={!ready || !state || busy || !!pendingBackup} onClick={() => void runOperation(handleExport)}>백업 내보내기</button>
-            <button type="button" disabled={!ready || busy || !!pendingBackup} onClick={() => void runOperation(handleImport)}>백업에서 복원</button>
+            <button type="button" className="picture-button" aria-label="백업 내보내기" title="백업 내보내기 · 세 게임과 설정을 파일로 보관" disabled={!ready || !state || busy || !!pendingBackup} onClick={() => void runOperation(handleExport)}><Sprite atlas="charms" frame={5} /></button>
+            <button type="button" className="picture-button" aria-label="백업에서 복원" title="백업에서 복원 · 보관한 기록 불러오기" disabled={!ready || busy || !!pendingBackup} onClick={() => void runOperation(handleImport)}><Sprite atlas="charms" frame={6} /></button>
           </div>
           <input ref={fileInput} type="file" accept=".cornerbits,application/json" className="sr-only" tabIndex={-1} aria-label="백업 파일 선택" onChange={(event) => {
             const file = event.target.files?.[0];
@@ -262,9 +264,20 @@ export default function App() {
             });
           }} />
         </section>
+        <details className="widget-info">
+          <summary aria-label="보관함 사용 안내" title="보관함 사용 안내"><Sprite atlas="charms" frame={8} /></summary>
+          <div className="widget-help">
+            <p className="section-label">바탕화면 위젯</p>
+            <p className="description">광산·정원·전구 그림으로 세 게임을 바꿉니다. 그림에 마우스를 두면 설명이 나타납니다.</p>
+            <p className="description">위쪽 제목을 끌어 위치를 옮기세요. 트레이의 ‘위젯 찾기’로 다시 볼 수 있습니다.</p>
+            <p className="description">위쪽 화살표 상자는 백업 내보내기, 아래쪽 화살표 상자는 복원입니다. 세 게임의 진행도·도감·재화·설정을 함께 보관합니다.</p>
+            <span className="version">v0.2.0</span>
+          </div>
+        </details>
         {pendingBackup && <section className="restore-confirm" aria-label="복원 확인">
           <p>{dateLabel(pendingBackup.updatedAt)} 기록으로 바꿉니다. 현재 기록은 먼저 별도 보관합니다.</p>
-          <p>{legacyBackup ? '1단계 설정 백업입니다. 복원하면 두 게임 진행도가 처음 상태로 바뀝니다.' : `광산 ${pendingBackup.games.mine.depth}층 · 채굴 ${pendingBackup.games.mine.totalMined}개 / 정원 수확 ${pendingBackup.games.garden.totalHarvests}회 · 화분 ${pendingBackup.games.garden.pots.length}개`}</p>
+          <p>{backupSchema === 1 ? '1단계 설정 백업입니다. 복원하면 세 게임 진행도가 처음 상태로 바뀝니다.' : `광산 ${pendingBackup.games.mine.depth}층 · 채굴 ${pendingBackup.games.mine.totalMined}개 / 정원 수확 ${pendingBackup.games.garden.totalHarvests}회 · 화분 ${pendingBackup.games.garden.pots.length}개 / 회로 ${pendingBackup.games.circuit.records.filter((turns) => turns > 0).length}/300개 완료`}</p>
+          {backupSchema === 2 && <p>광산·정원 백업입니다. 복원하면 회로 기록은 처음 상태로 바뀝니다.</p>}
           <div className="confirm-actions"><button type="button" className="primary" disabled={busy} onClick={() => void runOperation(confirmRestore)}>이 백업으로 복원</button><button type="button" disabled={busy} onClick={() => setPendingBackup(null)}>취소</button></div>
         </section>}
         </>}

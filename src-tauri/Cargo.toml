@@ -1,7 +1,7 @@
 [package]
 name = "cornerbits"
-version = "0.1.3"
-description = "CornerBits desktop widget mini mine and garden"
+version = "0.2.0"
+description = "CornerBits desktop companions: mine, garden and circuit"
 edition = "2021"
 rust-version = "1.90"
 

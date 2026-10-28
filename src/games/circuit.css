@@ -1,0 +1,30 @@
+.circuit-game { min-width: 0; }
+.circuit-board { display: grid; width: 224px; height: 224px; margin: 2px auto 0; }
+.circuit-board.size-4 { grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); }
+.circuit-board.size-5 { grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(5, 1fr); }
+.circuit-tile { position: relative; display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 0; padding: 0; border: 0; background: transparent; touch-action: manipulation; }
+.circuit-tile:disabled { background: transparent; }
+.circuit-tile:focus-visible { z-index: 2; outline-offset: -2px; background: rgb(248 248 246 / 80%); }
+.circuit-wires { position: absolute; inset: 0; pointer-events: none; }
+.circuit-wire { position: absolute; background: #aaa; border: 1px solid #f8f8f6; }
+.powered .circuit-wire { background: #353535; }
+.circuit-wire.north, .circuit-wire.south { left: calc(50% - 2px); width: 4px; height: calc(50% + 2px); }
+.circuit-wire.east, .circuit-wire.west { top: calc(50% - 2px); width: calc(50% + 2px); height: 4px; }
+.circuit-wire.north { top: 0; }
+.circuit-wire.east { right: 0; }
+.circuit-wire.south { bottom: 0; }
+.circuit-wire.west { left: 0; }
+.circuit-bulb { position: relative; width: 42px; height: 42px; }
+.size-5 .circuit-bulb { width: 35px; height: 35px; }
+.circuit-actions { display: flex; justify-content: center; align-items: center; gap: 13px; margin-top: 4px; }
+.circuit-actions button { display: flex; align-items: center; justify-content: center; min-width: 48px; min-height: 32px; padding: 0 3px; border: 0; background: transparent; }
+.circuit-actions button:disabled { background: transparent; }
+.circuit-actions .game-art { width: 32px; height: 32px; }
+.circuit-actions button:disabled .game-art { opacity: .5; }
+.circuit-details { margin-top: 3px; font-size: 11px; line-height: 1.6; }
+.circuit-details summary { display: flex; align-items: center; justify-content: center; width: 40px; min-height: 30px; margin-inline: auto; cursor: pointer; }
+.circuit-details summary .game-art { width: 30px; height: 30px; }
+.circuit-details[open] { padding: 0 6px 6px; background: rgb(248 248 246 / 96%); }
+.circuit-details p, .circuit-note { margin: 7px 0; padding: 2px 4px; background: rgb(248 248 246 / 90%); font-size: 11px; line-height: 1.6; word-break: keep-all; }
+.circuit-select { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.circuit-select select { min-width: 135px; min-height: 25px; border: 0; background: #fff; font-size: 11px; }

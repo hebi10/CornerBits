@@ -218,6 +218,14 @@ describe('long-term mine progression', () => {
 });
 
 describe('mine controls', () => {
+  it('uses picture-only controls with action names in accessible labels and tooltips', () => {
+    const html = renderToStaticMarkup(createElement(Mine, { state: initialMine(), disabled: false, onAction: () => {} }));
+    const buttons = html.match(/<button\b[^>]*>[\s\S]*?<\/button>/g) ?? [];
+    expect(buttons).toHaveLength(28);
+    expect(buttons.every((button) => button.replace(/<[^>]*>/g, '').trim() === '')).toBe(true);
+    expect(html).toContain('title="광물 일괄 판매, 0 코인"');
+  });
+
   it('uses quartz artwork consistently for all quartz blocks', () => {
     const html = renderToStaticMarkup(createElement(Mine, { state: initialMine(), disabled: false, onAction: () => {} }));
     const cells = html.match(/<button\b[^>]*class="mine-tile[^\"]*"[^>]*>[\s\S]*?<\/button>/g) ?? [];

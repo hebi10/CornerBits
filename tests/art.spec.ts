@@ -9,9 +9,9 @@ async function saved(page: Page) {
 test('local sprite atlases load with transparency and mine damage changes the art', async ({ page }) => {
   await page.goto('/');
   await saved(page);
-  const assets = await page.evaluate(async () => Promise.all(['mine', 'garden'].map(async (name) => {
+  const assets = await page.evaluate(async () => Promise.all(['cute-mine-atlas.png', 'cute-garden-spaced.png', 'charms-atlas.png'].map(async (name) => {
     const image = new Image();
-    image.src = `/art/${name}-atlas.png`;
+    image.src = `/art/${name}`;
     await image.decode();
     const canvas = document.createElement('canvas');
     canvas.width = image.width; canvas.height = image.height;
@@ -134,7 +134,9 @@ test('games expose the wallpaper while management and error messages stay readab
     await expect(page.locator('.save-state')).toHaveCSS('background-color', 'rgba(245, 245, 243, 0.88)');
   }
   await page.getByRole('button', { name: '관리', exact: true }).click();
-  await expect(page.locator('.shell')).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  await expect(page.locator('.shell')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  await page.getByLabel('보관함 사용 안내', { exact: true }).click();
+  await expect(page.locator('.widget-help')).toHaveCSS('background-color', 'rgba(245, 245, 243, 0.96)');
   await expect(page.getByRole('button', { name: '백업 내보내기' })).toBeEnabled();
   await page.getByRole('button', { name: '광산', exact: true }).click();
   await page.evaluate(() => {

@@ -11,14 +11,14 @@
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 280px; }
 button, input, select { font: inherit; }
-button { min-height: 32px; border: 1px solid #bdbdb8; background: #fff; color: #252525; padding: 6px 10px; cursor: pointer; }
-button:disabled { color: #777; cursor: default; background: #ecece8; }
+button { min-height: 32px; border: 0; background: transparent; color: #252525; padding: 6px 10px; cursor: pointer; }
+button:disabled { color: #777; cursor: default; background: transparent; }
 button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid #252525; outline-offset: 2px; }
 ::selection { color: #fff; background: #353535; }
 input { accent-color: #353535; caret-color: #252525; }
 * { scrollbar-width: thin; scrollbar-color: #8a8a83 #f5f5f3; }
-.shell { width: 100%; height: 100dvh; min-height: 36px; display: flex; flex-direction: column; background: rgb(245 245 243 / 90%); }
-.titlebar { height: 36px; flex: 0 0 36px; display: flex; align-items: center; gap: 5px; padding: 0 7px 0 13px; background: rgb(232 232 227 / 70%); user-select: none; }
+.shell { width: 100%; height: 100dvh; min-height: 36px; display: flex; flex-direction: column; background: transparent; }
+.titlebar { height: 36px; flex: 0 0 36px; display: flex; align-items: center; gap: 5px; padding: 0 7px 0 13px; background: transparent; user-select: none; }
 .brand { flex: 1; align-self: stretch; display: flex; align-items: center; font-size: 12px; font-weight: 700; }
 .window-actions { display: flex; gap: 3px; }
 .window-button { border: 0; background: transparent; min-width: 25px; min-height: 28px; padding: 3px 4px; font-size: 11px; }
@@ -46,8 +46,9 @@ footer { margin-top: 12px; font-size: 10px; color: #595959; line-height: 1.5; }
 .restore-confirm p { font-size: 11px; line-height: 1.6; margin: 0 0 10px; }
 .confirm-actions { display: flex; gap: 5px; }
 .confirm-actions button { padding: 5px 7px; font-size: 11px; }
-.primary { color: #fff; background: #353535; border-color: #353535; }
+.primary { color: #252525; background: transparent; font-weight: 700; }
 .compact { min-height: 36px; position: relative; }
+.compact .titlebar, .compact .window-button, .compact-error, .shell-game .brand, .shell-game .window-button[aria-label="종료"] { text-shadow: -1px 0 #f5f5f3, 1px 0 #f5f5f3, 0 -1px #f5f5f3, 0 1px #f5f5f3; }
 .compact .brand { flex: 1; }
 .compact-status { color: #595959; font-size: 10px; white-space: nowrap; }
 .compact-error { position: absolute; top: 4px; left: 104px; min-height: 28px; font-size: 10px; padding: 3px; }
@@ -55,17 +56,35 @@ footer { margin-top: 12px; font-size: 10px; color: #595959; line-height: 1.5; }
 .shell-game { background: transparent; }
 .shell-game .titlebar { height: 26px; flex-basis: 26px; padding: 1px 10px; background: transparent; }
 .shell-game .brand { font-size: 10px; font-weight: 500; }
-.shell-game .brand > span { padding: 3px 5px; background: rgb(245 245 243 / 88%); }
-.shell-game .window-actions { background: rgb(245 245 243 / 88%); }
+.shell-game .brand > span { padding: 3px 5px; }
+.shell-game .window-actions { background: transparent; }
 .shell-game .window-button { min-height: 22px; font-size: 10px; padding: 2px 4px; }
 .shell-game main { position: relative; padding: 3px 10px 8px; }
+.shell-game .window-button > .game-art { width: 21px; height: 21px; }
+.shell-game .window-button[aria-label="종료"] { background: transparent; }
 .shell-game .game-nav { display: flex; gap: 2px; width: max-content; margin-bottom: 5px; }
-.shell-game .game-nav button { min-width: 36px; min-height: 24px; border: 0; padding: 3px 5px; font-size: 10px; background: rgb(245 245 243 / 88%); }
-.shell-game .game-nav button[aria-pressed="true"] { background: #353535; color: #fff; }
-.shell-game .save-summary { position: absolute; top: 7px; right: 10px; margin: 0; }
+.shell-game .game-nav button { display: flex; align-items: center; justify-content: center; width: 39px; height: 40px; min-height: 0; border: 0; padding: 0; background: transparent; }
+.shell-game .game-nav button > .game-art { width: 29px; height: 29px; opacity: .65; }
+.shell-game .game-nav button[aria-pressed="true"] { background: transparent; }
+.shell-game .game-nav button[aria-pressed="true"] > .game-art { width: 39px; height: 39px; opacity: 1; }
+.shell-game .save-summary { position: absolute; top: 15px; right: 10px; margin: 0; }
 .shell-game .save-state { font-size: 9px; padding: 3px 4px; background: rgb(245 245 243 / 88%); }
 .shell-game .message, .shell-game main > .description { background: #f5f5f3; }
 .shell-game footer { width: fit-content; padding: 2px 4px; background: rgb(245 245 243 / 88%); font-size: 9px; }
 .shell-game .mine-details[open], .shell-game .garden-details[open] { padding: 5px; background: rgb(245 245 243 / 96%); }
 .shell-game .mine-tile:focus-visible, .shell-game .garden-pot:focus-visible { background: rgb(245 245 243 / 88%); outline-offset: 0; }
+.shell-game .game-nav button:focus-visible, .picture-button:focus-visible, .shell-game summary:focus-visible { background: rgb(245 245 243 / 88%); }
+.shell-manage .saved-time { display: none; }
+.shell-manage .backup-section { margin-top: 10px; display: flex; flex-direction: column; align-items: center; }
+.keepsake-art { width: 108px; height: 108px; }
+.keepsake-caption { width: fit-content; margin: 3px 0 10px; padding: 2px 5px; background: rgb(245 245 243 / 88%); font-size: 11px; }
+.shell-manage .backup-actions { display: flex; gap: 24px; }
+.picture-button, .picture-button:disabled { display: flex; align-items: center; justify-content: center; border: 0; padding: 0; width: 55px; height: 55px; background: transparent; }
+.picture-button > .game-art { width: 52px; height: 52px; }
+.picture-button:disabled > .game-art { opacity: .45; }
+.shell-manage .widget-info { margin-top: 7px; }
+.shell-manage .widget-info summary { list-style: none; cursor: pointer; width: 28px; height: 28px; }
+.shell-manage .widget-info summary > .game-art { width: 28px; height: 28px; }
+.widget-help { padding: 8px; background: rgb(245 245 243 / 96%); }
+.shell-manage .restore-confirm { background: #f5f5f3; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; } }

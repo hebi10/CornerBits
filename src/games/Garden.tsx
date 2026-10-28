@@ -87,10 +87,7 @@ export default function Garden({ state, onAction, disabled }: GardenProps) {
 
   return (
     <section className="garden" aria-label="작은 정원">
-      <div className="garden-heading">
-        <h1>작은 정원</h1>
-        <span title={`${state.coins.toLocaleString('ko-KR')} 코인`}>{numbers.format(state.coins)} 코인</span>
-      </div>
+      <h1 className="sr-only">작은 정원</h1>
       <div className={`garden-pots garden-pots-${Math.ceil(state.pots.length / 3)}`} aria-label={`화분 ${state.pots.length}개`}>
         {state.pots.map((plant, index) => {
           const ready = plant !== null && isPlantReady(plant, now);
@@ -102,36 +99,39 @@ export default function Garden({ state, onAction, disabled }: GardenProps) {
           const elapsedFraction = plant === null ? 0 : Math.max(0, now - plant.plantedAt) / growthDuration(plant);
           const frame = plant === null ? 0 : ready ? matureFrames[plant.species] : elapsedFraction < 0.25 ? 1 : elapsedFraction < 0.6 ? 2 : 3;
           const name = `${index + 1}번 화분 ${plant === null ? actionName : `${PLANTS[plant.species].name} ${actionName}`}${remaining ? `, ${remaining} 남음` : ''}`;
+          const reward = plant === null ? 0 : Math.min(15 + plant.species * 5, 1_000_000_000_000 - state.coins);
           return (
             <button type="button" key={index} className={`garden-pot${ready ? ' garden-pot-ready' : ''}${plant !== null && frame > 1 ? ' garden-pot-alive' : ''}`}
               disabled={disabled || waiting || (ready && harvestLimitReached)} onClick={() => {
                 pendingAction.current = action.type === 'water' || action.type === 'harvest' ? { before: state, action } : null;
                 onAction(action);
-              }} aria-label={name} title={name}>
+              }} aria-label={name} title={`${name}${ready ? ` · +${reward} 코인` : ''}`}>
               <Sprite atlas="garden" frame={frame} className="garden-pot-art" />
-              <span className="garden-pot-action">{plant === null ? '심기' : ready ? `수확 +${Math.min(15 + plant.species * 5, 1_000_000_000_000 - state.coins)}` : waiting ? remaining : '물주기'}</span>
+              {plant !== null && !plant.watered && !ready && <Sprite atlas="charms" frame={13} className="garden-water-mark" />}
               {feedback?.index === index && <span key={feedback.sequence} className={`garden-feedback garden-feedback-${feedback.type}`} aria-hidden="true">
-                {feedback.type === 'harvest' ? `+${feedback.reward}` : <><i /><i /><i /></>}
+                {feedback.type === 'harvest' ? `+${feedback.reward}` : <Sprite atlas="charms" frame={13} className="garden-water-feedback-art" />}
               </span>}
             </button>
           );
         })}
       </div>
-      <div className="garden-tools">
-        <Sprite atlas="garden" frame={matureFrames[species]} className="garden-seed-art" />
-        <label className="sr-only" htmlFor="garden-seed">심을 씨앗</label>
-        <select id="garden-seed" value={species} disabled={disabled} onChange={(event) => setSelectedSpecies(Number(event.target.value))}>
-          {PLANTS.map((plant, index) => isSpeciesUnlocked(state, index) && <option key={plant.name} value={index}>{plant.name}</option>)}
-        </select>
-        <button type="button" disabled={disabled || !canExpand || state.coins < cost} onClick={() => onAction({ type: 'expand' })}
-          aria-label={canExpand ? `화분 늘리기 ${cost.toLocaleString('ko-KR')} 코인` : '화분 확장 완료 12개'}>
-          {canExpand ? `화분 +1 · ${cost.toLocaleString('ko-KR')}` : '화분 12개 완료'}
-        </button>
-      </div>
       <details className="garden-details">
-        <summary>도감 {discovered}/40 · 가꾸는 방법</summary>
+        <summary aria-label="정원 도구와 도감" title="정원 도구와 도감"><Sprite atlas="charms" frame={8} className="garden-menu-art" /></summary>
         <div className="garden-details-body">
-          <p>빈 화분에 무료 씨앗을 심으세요. 물은 한 번만 줄 수 있고, 전체 성장 시간이 25% 줄어듭니다.</p>
+          <div className="garden-tools">
+            <Sprite atlas="charms" frame={12} className="garden-seed-art" />
+            <label className="sr-only" htmlFor="garden-seed">심을 씨앗</label>
+            <select id="garden-seed" value={species} disabled={disabled} onChange={(event) => setSelectedSpecies(Number(event.target.value))}>
+              {PLANTS.map((plant, index) => isSpeciesUnlocked(state, index) && <option key={plant.name} value={index}>{plant.name}</option>)}
+            </select>
+            <button type="button" disabled={disabled || !canExpand || state.coins < cost} onClick={() => onAction({ type: 'expand' })}
+              aria-label={canExpand ? `화분 늘리기 ${cost.toLocaleString('ko-KR')} 코인` : '화분 확장 완료 12개'}
+              title={canExpand ? `화분 늘리기 ${cost.toLocaleString('ko-KR')} 코인` : '화분 확장 완료 12개'}>
+              <Sprite atlas="charms" frame={14} className="garden-expand-art" />
+            </button>
+          </div>
+          <p>도감 {discovered}/40 · <span title={`${state.coins.toLocaleString('ko-KR')} 코인`}>{numbers.format(state.coins)} 코인</span></p>
+          <p>화분 그림을 눌러 심고 가꾸세요. 물뿌리개 표식이 있으면 물을 줄 수 있습니다. 한 번 물을 주면 전체 성장 시간이 25% 줄어듭니다.</p>
           <p>앱을 닫아도 자라며 시들지 않습니다. 다 자라면 직접 수확하세요. 한 품종을 5회 수확하면 다음 씨앗이 열립니다.</p>
           <p>씨앗 {unlocked}/40종 · 수확 {numbers.format(state.totalHarvests)}회 · 화분 {state.pots.length}/12개</p>
           {harvestLimitReached && <p>수확 기록 한도에 도달했습니다.</p>}

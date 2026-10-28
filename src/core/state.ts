@@ -1,12 +1,13 @@
 import { initialMine, parseMine, type MineState } from '../games/mine';
 import { initialGarden, parseGarden, type GardenState } from '../games/garden';
+import { initialCircuit, parseCircuit, type CircuitState } from '../games/circuit';
 
 export interface AppState {
-  schemaVersion: 2;
+  schemaVersion: 3;
   revision: number;
   updatedAt: string;
   settings: { alwaysOnTop: boolean; compact: boolean };
-  games: { mine: MineState; garden: GardenState };
+  games: { mine: MineState; garden: GardenState; circuit: CircuitState };
 }
 
 const MAX_FILE_BYTES = 2 * 1024 * 1024;
@@ -50,11 +51,11 @@ function validateState(value: unknown): AppState {
   if (!isRecord(value)) {
     throw new Error('저장 파일 형식이 올바르지 않습니다.');
   }
-  if (value.schemaVersion !== 1 && value.schemaVersion !== 2) {
+  if (value.schemaVersion !== 1 && value.schemaVersion !== 2 && value.schemaVersion !== 3) {
     throw new Error('지원하지 않는 저장 버전입니다. CornerBits 버전을 확인해 주세요.');
   }
   const keys = ['schemaVersion', 'revision', 'updatedAt', 'settings'];
-  if (value.schemaVersion === 2) keys.push('games');
+  if (value.schemaVersion !== 1) keys.push('games');
   if (!hasExactKeys(value, keys)) {
     throw new Error('저장 파일 형식이 올바르지 않습니다.');
   }
@@ -71,15 +72,15 @@ function validateState(value: unknown): AppState {
   }
   let games: AppState['games'];
   if (value.schemaVersion === 1) {
-    games = { mine: initialMine(), garden: initialGarden() };
+    games = { mine: initialMine(), garden: initialGarden(), circuit: initialCircuit() };
   } else {
-    if (!isRecord(value.games) || !hasExactKeys(value.games, ['mine', 'garden'])) {
+    if (!isRecord(value.games) || !hasExactKeys(value.games, value.schemaVersion === 2 ? ['mine', 'garden'] : ['mine', 'garden', 'circuit'])) {
       throw new Error('게임 기록 형식이 올바르지 않습니다.');
     }
-    games = { mine: parseMine(value.games.mine), garden: parseGarden(value.games.garden) };
+    games = { mine: parseMine(value.games.mine), garden: parseGarden(value.games.garden), circuit: value.schemaVersion === 2 ? initialCircuit() : parseCircuit(value.games.circuit) };
   }
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     revision: value.revision,
     updatedAt: value.updatedAt,
     settings: { alwaysOnTop: settings.alwaysOnTop, compact: settings.compact },
@@ -89,11 +90,11 @@ function validateState(value: unknown): AppState {
 
 export function initialState(): AppState {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     revision: 0,
     updatedAt: new Date().toISOString(),
     settings: { alwaysOnTop: false, compact: false },
-    games: { mine: initialMine(), garden: initialGarden() },
+    games: { mine: initialMine(), garden: initialGarden(), circuit: initialCircuit() },
   };
 }
 

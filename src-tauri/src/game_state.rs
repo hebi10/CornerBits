@@ -158,16 +158,70 @@ fn valid_total(counts: &[u64], total: u64) -> bool {
             == Some(total)
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CircuitState {
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub stage: u64,
+    #[serde(deserialize_with = "deserialize_integers")]
+    pub rotations: Vec<u64>,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub turns: u64,
+    #[serde(deserialize_with = "deserialize_integers")]
+    pub records: Vec<u64>,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub total_clears: u64,
+}
+
+impl Default for CircuitState {
+    fn default() -> Self {
+        Self {
+            stage: 1,
+            // Generator v1 stage 1 scramble, shared with the frontend.
+            rotations: vec![3, 2, 0, 2, 0, 2, 1, 1, 3, 2, 1, 1, 3, 1, 3, 0],
+            turns: 0,
+            records: vec![0; 300],
+            total_clears: 0,
+        }
+    }
+}
+
+impl CircuitState {
+    fn validate(&self) -> Result<(), String> {
+        let completed = self
+            .records
+            .iter()
+            .take_while(|record| **record > 0)
+            .count();
+        if !(1..=300).contains(&self.stage)
+            || self.rotations.len() != if self.stage <= 150 { 16 } else { 25 }
+            || self.rotations.iter().any(|rotation| *rotation > 3)
+            || self.turns > 1_000_000
+            || self.records.len() != 300
+            || self.records.iter().any(|record| *record > 1_000_000)
+            || self.records[completed..].iter().any(|record| *record != 0)
+            || self.stage > (completed as u64 + 1).min(300)
+            || self.total_clears < completed as u64
+            || self.total_clears > MAX_COUNT
+        {
+            return Err("회로 저장 데이터가 올바르지 않습니다.".into());
+        }
+        Ok(())
+    }
+}
+
 #[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Games {
     pub mine: MineState,
     pub garden: GardenState,
+    pub circuit: CircuitState,
 }
 
 impl Games {
     pub fn validate(&self) -> Result<(), String> {
         self.mine.validate()?;
-        self.garden.validate()
+        self.garden.validate()?;
+        self.circuit.validate()
     }
 }
