@@ -1,5 +1,24 @@
 # 검증 기록
 
+## GitHub 공개 업로드와 Windows 다운로드 · 2026-10-28
+
+해비님이 현재 코드를 GitHub에 업로드하고 Actions로 Windows 프로그램을 내려받도록 요청했으며, `hebi10/CornerBits`의 공개 범위를 직접 선택했습니다.
+
+- 공개 저장소 [hebi10/CornerBits](https://github.com/hebi10/CornerBits)에 기존 이력과 현재 코드를 일반 push로 업로드했습니다. 원격master와v0.9.1은 배포 구성 커밋 `dcff9f889bfa1860a5525c0c4c19915d5afb0cf3`을 가리켰습니다. 브랜치/worktree 생성, 이력 재작성, 강제 push는 하지 않았습니다. APPDATA 기록/스냅샷, .tools, node_modules, target와로컬dist는업로드하지않습니다.
+- 기본개발설정의bundle.active=false는유지하고,배포전용tauri.release.conf.json에서현재사용자NSIS설치·한국어/영어·누락WebView2다운로드를구성했습니다. 별도서명은추가하지않았으며설치/실행파일의실제서명상태는NotSigned입니다. Rust패키지설명만현재해안내용으로정정했고게임규칙/저장계약은바꾸지않았습니다.
+- Windows workflow는master/main/PR/수동실행에서검사·패키징하고,버전태그push의출시job만contents쓰기권한을사용합니다. 액션은공식현재릴리스의commitSHA로고정했고,checkout자격증명을저장하지않습니다. Node24/Ruststable/windows-2025 및잠긴npm/Cargo의존성을사용합니다. Actions산출물은30일보관하고일반다운로드는Releases로제공합니다.
+- actionlint1.7.12무오류,로컬타입체크와337단위테스트통과. 패키징fixture에서명시파일만ZIP에포함/두파일SHA/기존출력거부/버전불일치거부를검증했습니다. fixture의설치기자리에는복사한앱EXE를사용했으므로실제NSIS검증으로간주하지않았습니다. 실제NSIS는아래GitHub실행에서별도로성공했습니다.
+- [GitHub Actions 실행40663620439](https://github.com/hebi10/CornerBits/actions/runs/40663620439)은성공했습니다. 타입체크·단위337개·브라우저74개·Rust83개와포맷검사,실제Windows네이티브/NSIS빌드,패키징과아티팩트업로드가모두통과했습니다. 이실행은master push여서태그전용출시job은skipped이며,첫공개Release는같은검증산출물을CLI로기존v0.9.1태그에게시했습니다. 태그전용job의실제원격실행은이번에확정하지않습니다.
+- 실제CI아티팩트를내려받아설치기/앱제품명CornerBits·버전0.9.1과앱PE machine x64를확인했습니다. portable ZIP은cornerbits.exe와README.txt두개뿐이며,설치기와ZIP의SHA256이산출물명세와일치했습니다. 실제사용자PC의설치/제거GUI는자동실행하지않았습니다.
+- [공개Release v0.9.1](https://github.com/hebi10/CornerBits/releases/tag/v0.9.1)을draft/prerelease가아닌상태로게시했습니다. 인증헤더없이각파일을다시다운로드하여CI파일과바이트해시가동일함을확인했고,최신Release링크도HTTP200으로해당버전에연결됩니다.
+
+| 다운로드 | 크기(bytes) | SHA256 |
+|---|---:|---|
+| CornerBits_0.9.1_x64-setup.exe | 24,095,969 | `b49dd9bbb3403fe0231be93591a69bf469089a9bb859608466af9b3d66a114c5` |
+| CornerBits_0.9.1_windows-x64.zip | 24,835,157 | `9b92dd9833934b19eeca6bf1a398f0c67f31d7a8e903eb6b12c738ded9890647` |
+
+소스/이력의비밀키·주요토큰/민감파일명패턴은사전검사에서발견하지못했습니다. 기존작성자Git메타데이터와아트원본출처기록은이력을바꾸지않고보존했습니다. 새의존성·라이선스선언·ComputerUse·사용자파일삭제·명령강제종료·운영앱설정변경은없습니다. 마지막배포기록문서커밋만 `[skip ci]`로push하여이미통과한게임/패키징검사를문서수정때문에중복실행하지않습니다.
+
 ## 연속 작업과 누적 시간·획득량 · v0.9.1 · 2026-10-28
 
 해비님이 일하면서 켜 놓을 수 있도록 한 번 맡긴 낚시·채집을 계속하는 방식을 요청했습니다. 실행 뒤에는 주기적인 소식 대신 작업 시간과 쌓인 양을 나란히 표시하고, 마우스 설명에는 개수만 보이도록 수정했습니다.
