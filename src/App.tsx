@@ -230,7 +230,7 @@ export default function App() {
       {!compact && <main>
         <nav className="game-nav" aria-label="화면 선택">
           <button type="button" aria-label="낚시" title="작은 낚시터" aria-pressed={screen === 'fishing'} disabled={busy || !!pendingBackup} onClick={() => setScreen('fishing')}><Sprite atlas="fishing" frame={0} /></button>
-          <button type="button" aria-label="정원" title="정원 친구들" aria-pressed={screen === 'garden'} disabled={busy || !!pendingBackup} onClick={() => setScreen('garden')}><Sprite atlas="garden" frame={6} /></button>
+          <button type="button" aria-label="정원" title="정원" aria-pressed={screen === 'garden'} disabled={busy || !!pendingBackup} onClick={() => setScreen('garden')}><Sprite atlas="garden" frame={6} /></button>
           <button type="button" aria-label="검 키우기" title="작은 대장간" aria-pressed={screen === 'sword'} disabled={busy || !!pendingBackup} onClick={() => setScreen('sword')}><Sprite atlas="sword" frame={Math.min(9, Math.floor((state?.games.sword.level ?? 0) / 6))} /></button>
           <button type="button" aria-label="관리" title="기록 보관함" aria-pressed={screen === 'manage'} disabled={busy || !!pendingBackup} onClick={() => setScreen('manage')}><Sprite atlas="charms" frame={4} /></button>
         </nav>
@@ -248,7 +248,7 @@ export default function App() {
         <h1 className="sr-only">데이터 관리</h1>
         <section className="backup-section" aria-label="백업 관리">
           <Sprite atlas="charms" frame={4} className="keepsake-art" />
-          <p className="keepsake-caption">세 친구의 기록 보관함</p>
+          <p className="keepsake-caption">게임 기록 보관함</p>
           <div className="backup-actions">
             <button type="button" className="picture-button" aria-label="백업 내보내기" title="백업 내보내기 · 세 게임과 설정을 파일로 보관" disabled={!ready || !state || busy || !!pendingBackup} onClick={() => void runOperation(handleExport)}><Sprite atlas="charms" frame={5} /></button>
             <button type="button" className="picture-button" aria-label="백업에서 복원" title="백업에서 복원 · 보관한 기록 불러오기" disabled={!ready || busy || !!pendingBackup} onClick={() => void runOperation(handleImport)}><Sprite atlas="charms" frame={6} /></button>
@@ -271,7 +271,7 @@ export default function App() {
             <p className="description">광산·정원·전구 그림으로 세 게임을 바꿉니다. 그림에 마우스를 두면 설명이 나타납니다.</p>
             <p className="description">위쪽 제목을 끌어 위치를 옮기세요. 트레이의 ‘위젯 찾기’로 다시 볼 수 있습니다.</p>
             <p className="description">위쪽 화살표 상자는 백업 내보내기, 아래쪽 화살표 상자는 복원입니다. 세 게임의 진행도·도감·재화·설정을 함께 보관합니다.</p>
-            <span className="version">v0.4.0</span>
+            <span className="version">v0.4.1</span>
           </div>
         </details>
         {pendingBackup && <section className="restore-confirm" aria-label="복원 확인">

@@ -5,15 +5,15 @@
 .fishing-island { position: absolute; width: 135px; height: 135px; left: 5px; bottom: 2px; }
 .fishing-rod { position: absolute; width: 132px; height: 132px; right: 3px; top: 0; transform-origin: 28% 88%; }
 .fishing-line { position: absolute; top: 61px; right: 62px; width: 1px; height: 44px; background: #5a5a56; pointer-events: none; }
-.fishing-float { position: absolute; width: 48px; height: 48px; right: 39px; top: 90px; animation: fishing-float-sway 3.6s ease-in-out infinite; }
-.fishing-biting .fishing-float { animation: fishing-float-bite 550ms ease-in-out infinite; }
-.fishing-caught-art { position: absolute; width: 106px; height: 106px; right: 6px; bottom: 0; animation: fishing-catch-pop 450ms ease-out both; }
-.fishing-upgrade-art { position: absolute; width: 94px; height: 94px; left: 67px; top: 35px; animation: fishing-catch-pop 450ms ease-out both; }
+.fishing-float { position: absolute; width: 48px; height: 48px; right: 39px; top: 90px; animation: fishing-float-sway 3.6s steps(1, end) infinite; }
+.fishing-biting .fishing-float { animation: fishing-float-bite 550ms steps(2, end) infinite; }
+.fishing-caught-art { position: absolute; width: 106px; height: 106px; right: 6px; bottom: 0; animation: fishing-catch-pop 450ms steps(3, end) both; }
+.fishing-upgrade-art { position: absolute; width: 94px; height: 94px; left: 67px; top: 35px; animation: fishing-catch-pop 450ms steps(3, end) both; }
 .fishing-status { min-height: 26px; margin: 0; text-align: center; font-size: 10px; line-height: 1.6; }
 .fishing-keepsakes { display: flex; align-items: center; justify-content: center; gap: 9px; height: 46px; }
 .fishing-aquarium { width: 46px; height: 46px; }
 .fishing-swimmers { display: flex; align-items: center; gap: 0; min-width: 90px; }
-.fishing-swimmer { display: inline-block; width: 30px; height: 34px; animation: fishing-friend-sway 4.2s ease-in-out infinite; }
+.fishing-swimmer { display: inline-block; width: 30px; height: 34px; animation: fishing-friend-sway 4.2s steps(1, end) infinite; }
 .fishing-swimmer:nth-child(2) { animation-delay: -1.4s; }
 .fishing-swimmer:nth-child(3) { animation-delay: -2.8s; }
 .fishing-swimmer .game-art { width: 32px; height: 32px; }
@@ -43,8 +43,8 @@
 .fishing-help-toggle { align-self: center; min-height: 20px; padding: 1px 5px; font-size: 10px; }
 .fishing-help { display: flex; flex-direction: column; justify-content: center; gap: 6px; height: 119px; padding: 0 4px; }
 .fishing .fishing-help p { font-size: 10px; line-height: 1.6; word-break: keep-all; }
-@keyframes fishing-float-sway { 0%, 100% { transform: translateY(1px) rotate(-3deg); } 50% { transform: translateY(-2px) rotate(3deg); } }
-@keyframes fishing-float-bite { 0%, 100% { transform: translateY(0) rotate(-7deg); } 50% { transform: translateY(5px) rotate(7deg); } }
-@keyframes fishing-friend-sway { 0%, 100% { transform: translateY(1px); } 50% { transform: translateY(-2px); } }
-@keyframes fishing-catch-pop { from { transform: translateY(8px) scale(.88); } to { transform: translateY(0) scale(1); } }
+@keyframes fishing-float-sway { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+@keyframes fishing-float-bite { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
+@keyframes fishing-friend-sway { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+@keyframes fishing-catch-pop { from { transform: translateY(9px); } to { transform: translateY(0); } }
 @media (prefers-reduced-motion: reduce) { .fishing *, .fishing *::before, .fishing *::after { animation: none !important; transition: none !important; } }

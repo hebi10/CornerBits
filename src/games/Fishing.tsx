@@ -81,9 +81,9 @@ export default function Fishing({ state, disabled, onAction }: FishingProps) {
   const seconds = state.cast === null ? 0 : Math.max(0, Math.ceil((state.cast.biteAt - now) / 1_000));
   const buttonLabel = state.cast === null ? '낚싯대 던지기' : expired ? '다시 낚싯대 던지기'
     : biting ? '낚싯줄 당기기, 입질 중' : '낚싯줄 당기기, 아직 입질을 기다리는 중';
-  const status = state.cast === null ? feedback?.type === 'catch' ? `${feedback.discovered ? '새 친구! ' : ''}${FISH[feedback.species!]} · +${number.format(feedback.reward)} 코인`
-    : feedback?.type === 'miss' ? '괜찮아요, 다시 만나러 가요' : feedback?.type === 'upgrade' ? `낚싯대 ${state.rod}단계가 되었어요` : '낚싯대를 눌러 친구를 만나세요'
-    : expired ? '입질이 지나갔어요 · 다시 던질 수 있어요' : biting ? '찌가 움직여요! 지금 당겨요' : `입질을 기다려요 · 약 ${seconds}초`;
+  const status = state.cast === null ? feedback?.type === 'catch' ? `${feedback.discovered ? '신규 어종 · ' : ''}${FISH[feedback.species!]} · +${number.format(feedback.reward)} 코인`
+    : feedback?.type === 'miss' ? '낚시 실패 · 다시 던지기' : feedback?.type === 'upgrade' ? `낚싯대 ${state.rod}단계 강화 완료` : '낚싯대를 눌러 던지세요'
+    : expired ? '입질 종료 · 다시 던지기' : biting ? '입질 · 지금 당기세요' : `입질 대기 · 약 ${seconds}초`;
 
   return <section className={`fishing${biting ? ' fishing-biting' : ''}`} aria-label="작은 낚시">
     <h1 className="sr-only">작은 낚시</h1>
@@ -128,11 +128,11 @@ export default function Fishing({ state, disabled, onAction }: FishingProps) {
         </select></label>
         </div>
         <p className="fishing-record" title={`${number.format(state.coins)} 코인`}>도감 {caughtSpecies.length}/36 · 낚싯대 {state.rod}/8 · {compact.format(state.coins)} 코인</p>
-        <p className="fishing-goal" title={`누적 ${number.format(state.totalCaught)}마리 · 연속 ${state.streak}마리 · 최고 연속 ${state.bestStreak}마리`}>{isFishingComplete(state) ? '모든 물고기 친구를 만났어요!' : `큰 여정 · ${compact.format(state.totalCaught)}/${number.format(FISHING_GOAL)}마리`}</p>
+        <p className="fishing-goal" title={`누적 ${number.format(state.totalCaught)}마리 · 연속 ${state.streak}마리 · 최고 연속 ${state.bestStreak}마리`}>{isFishingComplete(state) ? '낚시 주요 목표 달성' : `수집 목표 · ${compact.format(state.totalCaught)}/${number.format(FISHING_GOAL)}마리`}</p>
         {showHelp ? <div className="fishing-help">
           <p>던진 뒤 약 18~30초 기다려요. 찌가 움직이면 5초 안에 당겨 주세요.</p>
           <p>빠르게 반응하면 코인을 더 받아요. 놓쳐도 재화는 줄지 않아요.</p>
-          <p>미끼마다 잘 만나는 친구가 달라요. 한 지역에서 25마리마다 못 만난 친구를 먼저 만나게 돼요.</p>
+          <p>미끼에 따라 어종 비중이 달라집니다. 지역별25번째 성공에서는 미발견 어종을 우선합니다.</p>
         </div> : <div className="fishing-collection" role="group" aria-label="물고기 그림 도감">
           {FISH.slice(page * 8, page * 8 + 8).map((name, offset) => {
             const index = page * 8 + offset;

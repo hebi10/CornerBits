@@ -1,9 +1,10 @@
-.game-art { display: inline-block; flex: none; width: 40px; height: 40px; background-size: 400% 400%; background-repeat: no-repeat; image-rendering: auto; filter: grayscale(1); vertical-align: middle; pointer-events: none; }
+.game-art { display: inline-block; flex: none; width: 40px; height: 40px; background-size: 400% 400%; background-repeat: no-repeat; image-rendering: pixelated; filter: grayscale(1); vertical-align: middle; pointer-events: none; }
 .mine-art { background-image: url('/art/cute-mine-atlas.png'); }
-.garden-art { background-image: url('/art/cute-garden-spaced.png'); }
-.fishing-art { background-image: url('/art/fishing-atlas.png'); }
-.sword-art { background-image: url('/art/sword-atlas.png'); }
-.charms-art { background-image: url('/art/charms-atlas.png'); clip-path: inset(6% 2%); }
+.garden-art { background-image: url('/art/pixel-garden-atlas.png'); }
+.fishing-art { background-image: url('/art/pixel-fishing-atlas.png'); }
+.fishing-aquarium { clip-path: inset(28% 0 0); }
+.sword-art { background-image: url('/art/pixel-sword-atlas.png'); }
+.charms-art { background-image: url('/art/pixel-utility-atlas.png'); }
 .frame-0 { background-position: 0 0; }
 .frame-1 { background-position: 33.333333% 0; }
 .frame-2 { background-position: 66.666667% 0; }

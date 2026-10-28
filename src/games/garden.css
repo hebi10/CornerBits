@@ -13,7 +13,7 @@
 .garden-pot-art { width: 84px; height: 84px; max-width: 100%; transform-origin: 50% 88%; }
 .garden-water-mark { position: absolute; width: 18px; height: 18px; right: 8%; bottom: 0; pointer-events: none; }
 .garden-pot:disabled { color: #595959; background: transparent; }
-.garden-pot-ready .garden-pot-art { animation: garden-sway 5s ease-in-out infinite; }
+.garden-pot-ready .garden-pot-art { animation: garden-sway 5s steps(1, end) infinite; }
 .garden-pot-alive:nth-child(3n + 2) .garden-pot-art { animation-delay: -1.7s; }
 .garden-pot-alive:nth-child(3n) .garden-pot-art { animation-delay: -3.2s; }
 .garden-pots-2 .garden-pot-art { width: 70px; height: 70px; }
@@ -22,8 +22,8 @@
 .garden-pots-4 .garden-pot-art { width: 54px; height: 54px; }
 .garden-pots-3 .garden-pot, .garden-pots-4 .garden-pot { gap: 0; padding: 0; }
 .garden-feedback { position: absolute; pointer-events: none; top: 12%; left: 50%; }
-.garden-feedback-harvest { padding: 1px 3px; background: rgb(245 245 243 / 88%); color: #252525; font-size: 11px; font-weight: 700; animation: garden-harvest 900ms ease-out both; }
-.garden-feedback-water { width: 28px; height: 28px; animation: garden-water 900ms ease-out both; }
+.garden-feedback-harvest { padding: 1px 3px; background: rgb(245 245 243 / 88%); color: #252525; font-size: 11px; font-weight: 700; animation: garden-harvest 900ms steps(3, end) both; }
+.garden-feedback-water { width: 28px; height: 28px; animation: garden-water 900ms steps(1, end) both; }
 .garden-water-feedback-art { width: 28px; height: 28px; }
 .garden-details { margin-top: 5px; font-size: 10px; }
 .garden-details summary { display: flex; justify-content: center; align-items: center; width: 32px; height: 32px; margin-left: auto; list-style: none; cursor: pointer; padding: 0; background: transparent; }
@@ -47,6 +47,6 @@
 .garden-catalog-pages button { min-height: 24px; padding: 2px 5px; font-size: 10px; }
 .garden-care { height: 122px; display: flex; flex-direction: column; justify-content: center; gap: 7px; padding: 0 5px; }
 .garden-care-toggle { align-self: center; min-height: 20px; padding: 1px 5px; font-size: 10px; }
-@keyframes garden-sway { 0%, 100% { transform: rotate(-1deg); } 50% { transform: rotate(1deg); } }
-@keyframes garden-water { 0% { opacity: 1; transform: translate(-50%, -5px) rotate(0); } 45% { opacity: 1; transform: translate(-50%, 0) rotate(-18deg); } 100% { opacity: 0; transform: translate(-50%, 4px) rotate(-18deg); } }
+@keyframes garden-sway { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+@keyframes garden-water { 0% { opacity: 1; transform: translate(-50%, -4px); } 45% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; transform: translate(-50%, 4px); } }
 @keyframes garden-harvest { from { opacity: 1; transform: translate(-50%, 0); } to { opacity: 0; transform: translate(-50%, -18px); } }

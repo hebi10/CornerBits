@@ -24,7 +24,7 @@ Three independent games with persistent growth: timing-based fishing, an offline
 
 ## Capabilities and Constraints
 
-- Small monochrome desktop decoration with cute smiling fish, plants, and swords and quiet motion. Picture controls replace persistent text buttons and scores; exact information is available through tooltips and expandable tools. Management matches the same transparent keepsake-box style. No shadows, rounded cards, or unsolicited sound.
+- Monochrome pixel-art desktop game, replacing the earlier cute smiling ornament style at the user's latest request. Fish, plants, swords and utility icons have no anthropomorphic faces. Pixel-step motion and a Gulim-first font match the graphic style. Picture controls, transparent surfaces, readable exact information and the management archive remain. No shadows, rounded cards, or unsolicited sound.
 - Growth, fishing bites, and sword upgrades should be visible in the art; exact names, odds and counts remain available in controls and collections. Honor reduced motion and pause hidden content.
 - Progress is tuned without daily limits. Use docs/balance.md: about58–61 modeled days at12.5 minutes per game, explicitly including bite/growth/polish waits. Sword variance and player strategy affect completion. Garden seeds stay permanently unlocked.
 - Preserve saved data outside the installation directory.

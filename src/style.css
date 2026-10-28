@@ -1,11 +1,11 @@
 :root {
-  font-family: "Malgun Gothic", "맑은 고딕", system-ui, sans-serif;
+  font-family: "GulimChe", "굴림체", "Gulim", "굴림", "Malgun Gothic", sans-serif;
   font-size: 12px;
   font-weight: 500;
   color: #252525;
   background: transparent;
   font-synthesis: none;
-  text-rendering: optimizeLegibility;
+  text-rendering: optimizeSpeed;
   color-scheme: light;
 }
 * { box-sizing: border-box; }

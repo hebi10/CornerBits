@@ -145,7 +145,7 @@ export default function Garden({ state, onAction, disabled }: GardenProps) {
           </div>
           <p className="garden-catalog-stats">도감 {discovered}/40 · <span title={`${state.coins.toLocaleString('ko-KR')} 코인`}>{numbers.format(state.coins)} 코인</span> · 화분 {state.pots.length}/12</p>
           <p className="garden-next-seed" title={`씨앗 ${unlocked}/40종 · 총 수확 ${state.totalHarvests.toLocaleString('ko-KR')}회`}>
-            {harvestLimitReached ? '수확 기록 한도에 도달했습니다.' : nextSpecies === null ? '모든 씨앗을 만났어요' : `다음 ${PLANTS[nextSpecies].name} · ${PLANTS[nextSpecies - 1].name} ${Math.min(harvestsToUnlock(nextSpecies), state.harvested[nextSpecies - 1])}/${harvestsToUnlock(nextSpecies)}회`}
+            {harvestLimitReached ? '수확 기록 한도에 도달했습니다.' : nextSpecies === null ? '모든 씨앗 해금' : `다음 ${PLANTS[nextSpecies].name} · ${PLANTS[nextSpecies - 1].name} ${Math.min(harvestsToUnlock(nextSpecies), state.harvested[nextSpecies - 1])}/${harvestsToUnlock(nextSpecies)}회`}
           </p>
           {showCare ? <div className="garden-care" id="garden-catalog-content">
             <p>화분을 눌러 심고, 물뿌리개가 보이면 물을 주세요. 성장 시간이 25% 줄어요.</p>

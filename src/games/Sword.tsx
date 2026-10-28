@@ -94,7 +94,7 @@ export default function Sword({ state, disabled, onAction }: SwordProps) {
       <span className="sword-level" title={`${SWORD_FORMS[frame]} · 목표 +60`}>+{state.level}</span>
       <button type="button" className="sword-object" disabled={disabled || !canPolish}
         aria-label={complete ? '검 성장 완료 +60' : remaining ? `검 연마, ${remaining}초 뒤 가능` : `검 연마, 재료 ${reward}개 얻기`}
-        title={complete ? '소원 검이 완성됐어요' : remaining ? `${remaining}초 뒤 숫돌이 준비돼요` : `검을 눌러 연마 · 재료 +${reward} · 작은 표시가 홈 안에 오면 +28`}
+        title={complete ? '성운검 +60 완성' : remaining ? `${remaining}초 뒤 연마 가능` : `검을 눌러 연마 · 재료 +${reward} · 표시가 홈 안에 오면 +28`}
         onClick={() => act({ type: 'polish' })}>
         <Sprite atlas="sword" frame={15} className="sword-stand" />
         <Sprite atlas="sword" frame={frame} className={`sword-blade${feedback?.type === 'success' || feedback?.type === 'safe' ? ' sword-celebrate' : ''}`} />
@@ -124,7 +124,7 @@ export default function Sword({ state, disabled, onAction }: SwordProps) {
         <p>재료 {number.format(state.ore)} · 조각 {number.format(state.shards)} · +{state.level}/60</p>
         <p>일반 {chance}% · 재료 {cost}<br />안정 100% · 재료 {safe.ore} + 조각 {safe.shards}</p>
         <p>실패: 검 유지·조각 +1. 39회 연속 실패 뒤 다음 일반 강화는 100%예요. 현재 {state.pity}/39회입니다.</p>
-        <p>연마는 10초마다 재료 20개, 표시가 홈에 오면 28개예요. 외형은 6단계마다 바뀌어요.</p>
+        <p>연마는10초마다 재료20개, 표시를 홈에 맞추면28개입니다. 외형은6단계마다 바뀝니다.</p>
         <div className="sword-forms" aria-label="검의 모습 도감">
           {SWORD_FORMS.map((name, index) => <span key={name} className={index <= frame ? '' : 'sword-form-locked'} title={`${name} · +${index * 6}부터`}>
             <Sprite atlas="sword" frame={index} /><small>+{index * 6}</small>

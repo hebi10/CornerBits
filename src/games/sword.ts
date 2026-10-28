@@ -19,7 +19,7 @@ export const SWORD_MAX_LEVEL = 60;
 export const SWORD_COUNT_LIMIT = 1_000_000_000_000;
 export const SWORD_MAX_TIMESTAMP = 8_640_000_000_000_000;
 export const POLISH_COOLDOWN = 10_000;
-export const SWORD_FORMS = ['조약돌 검', '새싹 검', '물결 검', '잎새 검', '달빛 검', '별꽃 검', '구름 검', '눈꽃 검', '은하 검', '소원 검'] as const;
+export const SWORD_FORMS = ['목검', '철검', '강철검', '톱날검', '수정검', '날개검', '월광검', '왕관검', '영웅검', '성운검'] as const;
 
 export function initialSword(): SwordState {
   return {
