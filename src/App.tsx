@@ -30,7 +30,7 @@ export default function App() {
   const [error, setError] = useState('');
   const [note, setNote] = useState('');
   const [pendingBackup, setPendingBackup] = useState<AppState | null>(null);
-  const [backupSchema, setBackupSchema] = useState(8);
+  const [backupSchema, setBackupSchema] = useState(10);
   const [screen, setScreen] = useState<'fishing' | 'garden' | 'sword' | 'manage'>('fishing');
   const [visible, setVisible] = useState(() => !document.hidden);
   const [saveFailed, setSaveFailed] = useState(false);
@@ -281,6 +281,8 @@ export default function App() {
           {backupSchema === 5 && <p>판매 기능 이전 백업입니다. 기존 코인·도감은 유지하고 판매 재고·미끼 재고는0으로 시작합니다. 이미 정산된 물고기를 다시 지급하지 않습니다.</p>}
           {backupSchema === 6 && <p>전시 기능 이전 백업입니다. 기존 기록을 유지하고 수집한 어종으로 전시를 구성합니다.</p>}
           {backupSchema === 7 && <p>해안 생활 이전 백업입니다. 이전 게임 기록을 보존하고, 해안 생활은 처음 상태로 복원합니다.</p>}
+          {backupSchema === 8 && <p>작업 간격 이전 백업입니다. 해안 재료와 꾸밈·집·진행 시간을 보존하고, 10분 작업으로 이어집니다.</p>}
+          {backupSchema === 9 && <p>작업별 집계 이전 백업입니다. 기존 진행도를 보존합니다. 낚시·채집의 작업 시간은 저장된 경과 시간부터, 획득량은 0부터 집계합니다.</p>}
           <div className="confirm-actions"><button type="button" className="primary" disabled={busy} onClick={() => void runOperation(confirmRestore)}>이 백업으로 복원</button><button type="button" disabled={busy} onClick={() => setPendingBackup(null)}>취소</button></div>
         </section>}
         </>}

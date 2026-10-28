@@ -651,6 +651,32 @@ where
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum CoastWorkAction {
+    Fish,
+    Gather,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CoastReport {
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub id: u64,
+    pub activity: CoastWorkAction,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub amount: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub cycles: u64,
+}
+
+fn deserialize_coast_report<'de, D>(deserializer: D) -> Result<Option<CoastReport>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    Option::<CoastReport>::deserialize(deserializer)
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct CoastState {
     #[serde(deserialize_with = "deserialize_coast_activity")]
@@ -671,6 +697,14 @@ pub struct CoastState {
     pub decoration: u64,
     #[serde(deserialize_with = "deserialize_integer")]
     pub house_level: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub work_interval: u64,
+    #[serde(deserialize_with = "deserialize_coast_report")]
+    pub last_report: Option<CoastReport>,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub work_time_ms: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub work_amount: u64,
 }
 
 impl Default for CoastState {
@@ -685,12 +719,209 @@ impl Default for CoastState {
             coins: 0,
             decoration: 0,
             house_level: 1,
+            work_interval: 10,
+            last_report: None,
+            work_time_ms: 0,
+            work_amount: 0,
         }
     }
 }
 
 impl CoastState {
     fn validate(&self) -> Result<(), String> {
+        if self.work_time_ms > MAX_COUNT || self.work_amount > MAX_COUNT {
+            return Err("해안 생활 누적 작업 기록이 올바르지 않습니다.".into());
+        }
+        let valid_work = match self.activity {
+            Some(CoastAction::Fish) => {
+                self.work_time_ms >= self.elapsed_ms && self.work_amount <= self.catches
+            }
+            Some(CoastAction::Gather) => {
+                self.work_time_ms >= self.elapsed_ms && self.work_amount <= self.total_gathered
+            }
+            _ => self.work_time_ms == 0 && self.work_amount == 0,
+        };
+        if !valid_work {
+            return Err("해안 생활 누적 작업 기록이 올바르지 않습니다.".into());
+        }
+        LegacyCoastV9 {
+            activity: self.activity.clone(),
+            elapsed_ms: self.elapsed_ms,
+            catches: self.catches,
+            total_gathered: self.total_gathered,
+            fish: self.fish,
+            wood: self.wood,
+            coins: self.coins,
+            decoration: self.decoration,
+            house_level: self.house_level,
+            work_interval: self.work_interval,
+            last_report: self.last_report.clone(),
+        }
+        .validate()
+    }
+}
+
+// v9 had interval/report fields but no totals for the current work session.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct LegacyCoastV9 {
+    #[serde(deserialize_with = "deserialize_coast_activity")]
+    activity: Option<CoastAction>,
+    #[serde(deserialize_with = "deserialize_integer")]
+    elapsed_ms: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    catches: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    total_gathered: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    fish: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    wood: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    coins: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    decoration: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    house_level: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    work_interval: u64,
+    #[serde(deserialize_with = "deserialize_coast_report")]
+    last_report: Option<CoastReport>,
+}
+
+impl LegacyCoastV9 {
+    pub(crate) fn migrate(self) -> Result<CoastState, String> {
+        self.validate()?;
+        let work_time_ms = match self.activity {
+            Some(CoastAction::Fish | CoastAction::Gather) => self.elapsed_ms,
+            _ => 0,
+        };
+        Ok(CoastState {
+            activity: self.activity,
+            elapsed_ms: self.elapsed_ms,
+            catches: self.catches,
+            total_gathered: self.total_gathered,
+            fish: self.fish,
+            wood: self.wood,
+            coins: self.coins,
+            decoration: self.decoration,
+            house_level: self.house_level,
+            work_interval: self.work_interval,
+            last_report: self.last_report,
+            work_time_ms,
+            work_amount: 0,
+        })
+    }
+
+    fn validate(&self) -> Result<(), String> {
+        if ![10, 15].contains(&self.work_interval) || !(1..=3).contains(&self.house_level) {
+            return Err("해안 생활 작업 간격이 올바르지 않습니다.".into());
+        }
+        if let Some(report) = &self.last_report {
+            let total = match report.activity {
+                CoastWorkAction::Fish => self.catches,
+                CoastWorkAction::Gather => self.total_gathered,
+            };
+            if [report.id, report.amount, report.cycles]
+                .iter()
+                .any(|count| !(1..=MAX_COUNT).contains(count))
+                || report.amount < 2 * report.cycles
+                || report.amount > 9 * report.cycles
+                || report.amount > total
+            {
+                return Err("해안 생활 최근 소식이 올바르지 않습니다.".into());
+            }
+        }
+        let duration = match self.activity {
+            Some(CoastAction::Fish | CoastAction::Gather) => self.work_interval * 60_000,
+            _ => 4_200,
+        };
+        let reward = self.house_level * if self.work_interval == 10 { 2 } else { 3 };
+        LegacyCoastV8 {
+            activity: self.activity.clone(),
+            elapsed_ms: self.elapsed_ms,
+            catches: self.catches,
+            total_gathered: self.total_gathered,
+            fish: self.fish,
+            wood: self.wood,
+            coins: self.coins,
+            decoration: self.decoration,
+            house_level: self.house_level,
+        }
+        .validate_with_rules(duration, reward)
+    }
+}
+
+// v8 must retain its exact nine-field shape and short activity durations.
+// Validate it before introducing the idle-work fields used by v9.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct LegacyCoastV8 {
+    #[serde(deserialize_with = "deserialize_coast_activity")]
+    activity: Option<CoastAction>,
+    #[serde(deserialize_with = "deserialize_integer")]
+    elapsed_ms: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    catches: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    total_gathered: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    fish: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    wood: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    coins: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    decoration: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    house_level: u64,
+}
+
+impl LegacyCoastV8 {
+    pub(crate) fn migrate(self) -> Result<CoastState, String> {
+        let duration = if self.activity == Some(CoastAction::Fish) {
+            5_200
+        } else {
+            4_200
+        };
+        self.validate_with_rules(duration, self.house_level)?;
+        // A valid short v8 cycle may lack room for the larger v9 reward.
+        // Keep every earned resource and stop only that pending cycle.
+        let reward = self.house_level * 2;
+        let can_continue = match self.activity {
+            Some(CoastAction::Fish) => {
+                self.catches <= MAX_COUNT - reward && self.fish <= MAX_COUNT - reward
+            }
+            Some(CoastAction::Gather) => {
+                self.total_gathered <= MAX_COUNT - reward && self.wood <= MAX_COUNT - reward
+            }
+            _ => true,
+        };
+        let work_time_ms = if can_continue
+            && matches!(self.activity, Some(CoastAction::Fish | CoastAction::Gather))
+        {
+            self.elapsed_ms
+        } else {
+            0
+        };
+        Ok(CoastState {
+            activity: if can_continue { self.activity } else { None },
+            elapsed_ms: if can_continue { self.elapsed_ms } else { 0 },
+            catches: self.catches,
+            total_gathered: self.total_gathered,
+            fish: self.fish,
+            wood: self.wood,
+            coins: self.coins,
+            decoration: self.decoration,
+            house_level: self.house_level,
+            work_interval: 10,
+            last_report: None,
+            work_time_ms,
+            work_amount: 0,
+        })
+    }
+
+    fn validate_with_rules(&self, duration: u64, reward: u64) -> Result<(), String> {
         if [
             self.catches,
             self.total_gathered,
@@ -717,19 +948,12 @@ impl CoastState {
                 Err("해안 생활 대기 시간이 올바르지 않습니다.".into())
             };
         };
-        let duration = if *activity == CoastAction::Fish {
-            5_200
-        } else {
-            4_200
-        };
         let can_finish = match activity {
             CoastAction::Fish => {
-                self.catches <= MAX_COUNT - self.house_level
-                    && self.fish <= MAX_COUNT - self.house_level
+                self.catches <= MAX_COUNT - reward && self.fish <= MAX_COUNT - reward
             }
             CoastAction::Gather => {
-                self.total_gathered <= MAX_COUNT - self.house_level
-                    && self.wood <= MAX_COUNT - self.house_level
+                self.total_gathered <= MAX_COUNT - reward && self.wood <= MAX_COUNT - reward
             }
             CoastAction::Upgrade => self.house_level < 3,
             CoastAction::Flower => self.decoration & 1 == 0,

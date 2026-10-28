@@ -3,10 +3,10 @@ import { initialGarden, migrateGarden, parseGarden, type GardenState } from '../
 import { initialCircuit, parseCircuit, type CircuitState } from '../games/circuit';
 import { initialFishing, migrateFishing, migrateFishingV6, parseFishing, type FishingState } from '../games/fishing';
 import { initialSword, parseSword, type SwordState } from '../games/sword';
-import { initialCoast, parseCoast, type CoastalState } from '../coast/model';
+import { initialCoast, migrateCoastV8, migrateCoastV9, parseCoast, type CoastalState } from '../coast/model';
 
 export interface AppState {
-  schemaVersion: 8;
+  schemaVersion: 10;
   revision: number;
   updatedAt: string;
   settings: { alwaysOnTop: boolean; compact: boolean };
@@ -54,7 +54,7 @@ function validateState(value: unknown): AppState {
   if (!isRecord(value)) {
     throw new Error('저장 파일 형식이 올바르지 않습니다.');
   }
-  if (![1, 2, 3, 4, 5, 6, 7, 8].includes(value.schemaVersion as number)) {
+  if (![1, 2, 3, 4, 5, 6, 7, 8, 9, 10].includes(value.schemaVersion as number)) {
     throw new Error('지원하지 않는 저장 버전입니다. CornerBits 버전을 확인해 주세요.');
   }
   const keys = ['schemaVersion', 'revision', 'updatedAt', 'settings'];
@@ -77,14 +77,14 @@ function validateState(value: unknown): AppState {
   if (value.schemaVersion === 1) {
     games = { mine: initialMine(), garden: initialGarden(), circuit: initialCircuit(), fishing: initialFishing(), sword: initialSword(), coast: initialCoast() };
   } else {
-    const gameKeys = value.schemaVersion === 2 ? ['mine', 'garden'] : value.schemaVersion === 8 ? ['mine', 'garden', 'circuit', 'fishing', 'sword', 'coast'] : Number(value.schemaVersion) >= 5 ? ['mine', 'garden', 'circuit', 'fishing', 'sword'] : ['mine', 'garden', 'circuit'];
+    const gameKeys = value.schemaVersion === 2 ? ['mine', 'garden'] : Number(value.schemaVersion) >= 8 ? ['mine', 'garden', 'circuit', 'fishing', 'sword', 'coast'] : Number(value.schemaVersion) >= 5 ? ['mine', 'garden', 'circuit', 'fishing', 'sword'] : ['mine', 'garden', 'circuit'];
     if (!isRecord(value.games) || !hasExactKeys(value.games, gameKeys)) {
       throw new Error('게임 기록 형식이 올바르지 않습니다.');
     }
-    games = { mine: parseMine(value.games.mine), garden: Number(value.schemaVersion) >= 4 ? parseGarden(value.games.garden) : migrateGarden(value.games.garden), circuit: value.schemaVersion === 2 ? initialCircuit() : parseCircuit(value.games.circuit), fishing: Number(value.schemaVersion) >= 7 ? parseFishing(value.games.fishing) : value.schemaVersion === 6 ? migrateFishingV6(value.games.fishing) : value.schemaVersion === 5 ? migrateFishing(value.games.fishing) : initialFishing(), sword: Number(value.schemaVersion) >= 5 ? parseSword(value.games.sword) : initialSword(), coast: value.schemaVersion === 8 ? parseCoast(value.games.coast) : initialCoast() };
+    games = { mine: parseMine(value.games.mine), garden: Number(value.schemaVersion) >= 4 ? parseGarden(value.games.garden) : migrateGarden(value.games.garden), circuit: value.schemaVersion === 2 ? initialCircuit() : parseCircuit(value.games.circuit), fishing: Number(value.schemaVersion) >= 7 ? parseFishing(value.games.fishing) : value.schemaVersion === 6 ? migrateFishingV6(value.games.fishing) : value.schemaVersion === 5 ? migrateFishing(value.games.fishing) : initialFishing(), sword: Number(value.schemaVersion) >= 5 ? parseSword(value.games.sword) : initialSword(), coast: value.schemaVersion === 10 ? parseCoast(value.games.coast) : value.schemaVersion === 9 ? migrateCoastV9(value.games.coast) : value.schemaVersion === 8 ? migrateCoastV8(value.games.coast) : initialCoast() };
   }
   return {
-    schemaVersion: 8,
+    schemaVersion: 10,
     revision: value.revision,
     updatedAt: value.updatedAt,
     settings: { alwaysOnTop: settings.alwaysOnTop, compact: settings.compact },
@@ -94,7 +94,7 @@ function validateState(value: unknown): AppState {
 
 export function initialState(): AppState {
   return {
-    schemaVersion: 8,
+    schemaVersion: 10,
     revision: 0,
     updatedAt: new Date().toISOString(),
     settings: { alwaysOnTop: false, compact: false },

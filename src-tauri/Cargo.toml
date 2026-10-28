@@ -1,6 +1,6 @@
 [package]
 name = "cornerbits"
-version = "0.8.0"
+version = "0.9.1"
 description = "CornerBits desktop companions: mine, garden and circuit"
 edition = "2021"
 rust-version = "1.90"

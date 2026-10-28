@@ -13,6 +13,13 @@ function harness(state:AppState|null=source()){
 }
 
 describe('coastal durable session controller',()=>{
+  it('commits each long work report once, continues working, and checkpoints minutes without rewards',async()=>{
+    const {session,port}=harness();await session.load();await session.start('fish');session.advance(60_000);await session.checkpoint();
+    expect(session.getSnapshot().coast).toMatchObject({activity:'fish',elapsedMs:60_000,fish:5,lastReport:null});
+    session.advance(540_000);await session.checkpoint();expect(session.getSnapshot().coast).toMatchObject({activity:'fish',elapsedMs:0,fish:7,lastReport:{id:1,amount:2,cycles:1}});
+    session.advance(1_200_000);await session.checkpoint();expect(session.getSnapshot().coast).toMatchObject({activity:'fish',fish:11,lastReport:{id:2,amount:4,cycles:2}});
+    await session.sell();expect(session.getSnapshot().coast).toMatchObject({activity:'fish',fish:0,coins:185});await session.stop();await session.changeInterval(15);expect(session.getSnapshot().coast).toMatchObject({activity:null,elapsedMs:0,workInterval:15});expect(port.save).toHaveBeenCalled();
+  });
   it('adopts costs only after the reserved start snapshot has saved and locks concurrent actions',async()=>{
     const {session,port,writes}=harness();await session.load();const release=deferred();vi.mocked(port.save).mockImplementationOnce(async state=>{writes.push(structuredClone(state));await release.promise;});
     const starting=session.start('flower');expect(session.getSnapshot()).toMatchObject({busy:true,coast:{activity:null,wood:3,coins:20,decoration:0}});await turns();
@@ -23,12 +30,12 @@ describe('coastal durable session controller',()=>{
   it('does not write animation ticks and checkpoints resumable elapsed time',async()=>{
     const {session,port,writes}=harness();await session.load();await session.start('fish');session.advance(600);session.advance(480);expect(port.save).toHaveBeenCalledTimes(1);expect(session.getSnapshot().state!.games.coast.elapsedMs).toBe(0);expect(session.getSnapshot().coast!.elapsedMs).toBe(1080);
     expect(await session.checkpoint()).toBe(true);expect(port.save).toHaveBeenCalledTimes(2);expect(writes[1].games.coast.elapsedMs).toBe(1080);expect(await session.checkpoint()).toBe(true);expect(port.save).toHaveBeenCalledTimes(2);
-    const reopened=harness(writes[1]);await reopened.session.load();reopened.session.advance(4120);await reopened.session.checkpoint();expect(reopened.session.getSnapshot().coast).toMatchObject({activity:null,fish:6,catches:6});
+    const reopened=harness(writes[1]);await reopened.session.load();reopened.session.advance(598920);await reopened.session.checkpoint();expect(reopened.session.getSnapshot().coast).toMatchObject({activity:'fish',fish:7,catches:7});
   });
   it('does not show completion rewards before the save succeeds',async()=>{
-    const {session,port}=harness();await session.load();await session.start('fish');session.advance(5100);const release=deferred();vi.mocked(port.save).mockImplementationOnce(()=>release.promise);
-    session.advance(100);await turns();expect(session.getSnapshot()).toMatchObject({busy:true,coast:{activity:'fish',fish:5,catches:5,elapsedMs:5100}});
-    release.resolve();await session.checkpoint();expect(session.getSnapshot()).toMatchObject({busy:false,coast:{activity:null,fish:6,catches:6}});
+    const {session,port}=harness();await session.load();await session.start('fish');session.advance(599900);await session.checkpoint();const release=deferred();vi.mocked(port.save).mockImplementationOnce(()=>release.promise);
+    session.advance(100);await turns();expect(session.getSnapshot()).toMatchObject({busy:true,coast:{activity:'fish',fish:5,catches:5,elapsedMs:599900}});
+    release.resolve();await session.checkpoint();expect(session.getSnapshot()).toMatchObject({busy:false,coast:{activity:'fish',fish:7,catches:7}});
   });
   it('keeps a failed exact snapshot for retry without duplicate reserved costs or rewards',async()=>{
     const {session,port}=harness();await session.load();vi.mocked(port.save).mockRejectedValueOnce(new Error('disk full'));await session.start('flower');
@@ -46,7 +53,7 @@ describe('coastal durable session controller',()=>{
     const {session,port}=harness();await session.load();const gate=deferred();vi.mocked(port.save).mockImplementationOnce(()=>gate.promise);const starting=session.start('fish');
     const imported={...source(),revision:50,games:{...source().games,coast:{...initialCoast(),totalGathered:1,wood:1}}};const restoring=session.restore(imported);gate.reject(new Error('write failed'));await starting;expect(await restoring).toBe(true);
     expect(session.getSnapshot()).toMatchObject({saveFailed:false,state:{revision:51},coast:{activity:null,wood:1,fish:0,catches:0}});await session.retry();expect(port.save).toHaveBeenCalledTimes(1);
-    await session.start('gather');session.advance(4200);await session.checkpoint();expect(session.getSnapshot().coast).toMatchObject({wood:2,catches:0});
+    await session.start('gather');session.advance(600000);await session.checkpoint();expect(session.getSnapshot().coast).toMatchObject({wood:3,catches:0});
   });
   it('preserves the previous state and retry after a restore failure',async()=>{
     const {session,port}=harness();await session.load();vi.mocked(port.save).mockRejectedValueOnce(new Error('write failed'));await session.start('flower');const previous=session.getSnapshot().state;

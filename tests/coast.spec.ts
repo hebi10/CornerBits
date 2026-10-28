@@ -1,25 +1,26 @@
 import {expect,test,type Page} from '@playwright/test';
 async function saved(page:Page){await expect(page.locator('.coast-save-state')).toHaveText('저장 완료');return page.evaluate(()=>JSON.parse(localStorage.getItem('cornerbits.preview.state')!));}
-async function trip(page:Page,name:string,ms:number){await page.getByRole('button',{name,exact:true}).click();await saved(page);await page.clock.fastForward(ms);await saved(page);}
 
 test('fishing and gathered resources become a permanently saved home decoration',async({page})=>{
  const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
  await page.clock.install();await page.goto('/coast.html');await saved(page);
- for(let n=0;n<3;n++)await trip(page,'해변에서 나무 줍기',4400);
- expect(errors).toEqual([]);expect((await saved(page)).games.coast.wood).toBe(3);
- for(let n=0;n<2;n++)await trip(page,'부두에서 낚시하기',5400);
+ await page.getByRole('button',{name:'해변에서 나무 줍기'}).click();await saved(page);await page.clock.fastForward(600_000);expect((await saved(page)).games.coast).toMatchObject({wood:2,activity:'gather'});
+ await page.clock.fastForward(600_000);const running=(await saved(page)).games.coast;expect(running).toMatchObject({wood:4,activity:'gather',lastReport:{id:2,amount:2},workAmount:4});expect(running.workTimeMs).toBeGreaterThanOrEqual(1_200_000);expect(running.workTimeMs).toBeLessThan(1_201_000);await expect(page.getByRole('timer')).toHaveText('채집 20:00 · 나무 +4');await expect(page.locator('.coast-work-line')).toHaveAttribute('title','나무 4개');
+ await page.getByRole('button',{name:'작업 중단',exact:true}).click();await saved(page);await page.getByRole('button',{name:'부두에서 낚시하기'}).click();await saved(page);
+ await page.clock.fastForward(10_000);expect((await saved(page)).games.coast.fish).toBe(0);await page.clock.fastForward(590_000);await saved(page);
  await page.getByRole('button',{name:'물고기 2마리 판매',exact:true}).click();expect((await saved(page)).games.coast.coins).toBe(30);
- await page.getByRole('button',{name:'집 꾸미기',exact:true}).click();await page.getByRole('button',{name:'꽃화분 제작',exact:true}).click();await saved(page);await page.clock.fastForward(4400);
- const coast=(await saved(page)).games.coast;expect(coast).toMatchObject({decoration:1,wood:0,coins:10,fish:0,catches:2,totalGathered:3});await expect(page.getByRole('img',{name:'직접 놓은 꽃화분'})).toBeVisible();
+ expect((await saved(page)).games.coast.activity).toBe('fish');await expect(page.getByRole('timer')).toHaveText('낚시 10:00 · 물고기 +2');await page.getByRole('button',{name:'작업 중단',exact:true}).click();await saved(page);
+ await page.getByRole('button',{name:'집 꾸미기',exact:true}).click();await page.getByRole('button',{name:'꽃화분 제작',exact:true}).click();await saved(page);await page.clock.fastForward(4500);
+ const coast=(await saved(page)).games.coast;expect(coast).toMatchObject({decoration:1,wood:1,coins:10,fish:0,catches:2,totalGathered:4});await expect(page.getByRole('img',{name:'직접 놓은 꽃화분'})).toBeVisible();expect(errors).toEqual([]);
  await page.reload();expect((await saved(page)).games.coast).toEqual(coast);
 });
 
-test('pause and compact checkpoint an unfinished trip without offline rewards',async({page})=>{
+test('explicit pause freezes work while compact keeps working and reopening preserves the remainder',async({page})=>{
  await page.clock.install();await page.goto('/coast.html');await saved(page);await page.getByRole('button',{name:'해변에서 나무 줍기'}).click();await saved(page);await page.clock.fastForward(640);
  await page.getByRole('button',{name:'움직임 정지'}).click();let coast=(await saved(page)).games.coast;expect(coast.elapsedMs).toBeGreaterThan(0);expect(coast.wood).toBe(0);
- await page.clock.fastForward(10000);expect((await saved(page)).games.coast).toEqual(coast);
- await page.getByRole('button',{name:'움직임 재생'}).click();await page.getByRole('button',{name:'막대로 축소'}).click();await saved(page);await page.clock.fastForward(10000);await page.getByRole('button',{name:'펼치기'}).click();await saved(page);expect((await saved(page)).games.coast.wood).toBe(0);
- await page.reload();coast=(await saved(page)).games.coast;expect(coast.activity).toBe('gather');await page.clock.fastForward(4400);expect((await saved(page)).games.coast.wood).toBe(1);
+ await page.clock.fastForward(600_000);expect((await saved(page)).games.coast).toEqual(coast);
+ await page.getByRole('button',{name:'움직임 재생'}).click();await page.getByRole('button',{name:'막대로 축소'}).click();await saved(page);await page.clock.fastForward(600_000);await page.getByRole('button',{name:'펼치기'}).click();await saved(page);expect((await saved(page)).games.coast.wood).toBe(2);
+ const before=(await saved(page)).games.coast;await page.reload();coast=(await saved(page)).games.coast;expect(coast).toEqual(before);await page.clock.fastForward(600_000);expect((await saved(page)).games.coast.wood).toBe(4);
 });
 
 test('one-to-one transparent scene and record menu remain usable with reduced motion',async({page})=>{
@@ -42,8 +43,16 @@ test('coastal scenery and growth stages load with transparent corners',async({pa
  }
 });
 
-test('hiding checkpoints elapsed work and gives no hidden-time rewards',async({page})=>{
+test('hidden documents and an open records menu keep working',async({page})=>{
  await page.clock.install();await page.goto('/coast.html');await saved(page);await page.getByRole('button',{name:'부두에서 낚시하기'}).click();await saved(page);await page.clock.fastForward(800);
  await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));});const before=await saved(page);expect(before.games.coast.elapsedMs).toBeGreaterThan(0);
- await page.clock.fastForward(60000);expect(await saved(page)).toEqual(before);await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:false});document.dispatchEvent(new Event('visibilitychange'));});await page.clock.fastForward(5400);expect((await saved(page)).games.coast).toMatchObject({fish:1,catches:1,activity:null});
+ await page.clock.fastForward(600_000);expect((await saved(page)).games.coast).toMatchObject({fish:2,catches:2,activity:'fish'});await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:false});document.dispatchEvent(new Event('visibilitychange'));});await saved(page);
+ await page.getByRole('button',{name:'기록과 백업',exact:true}).click();await saved(page);await page.clock.fastForward(600_000);expect((await saved(page)).games.coast).toMatchObject({fish:4,catches:4,activity:'fish'});await expect(page.locator('.coast-last-report')).toContainText('낚시 소식');
+});
+
+test('15 minute work waits for its real boundary and keeps a saved quiet report',async({page})=>{
+ await page.clock.install();await page.goto('/coast.html');await saved(page);await page.getByRole('button',{name:'기록과 백업',exact:true}).click();await page.getByRole('button',{name:'정산 간격 15분',exact:true}).click();await saved(page);await page.getByRole('button',{name:'기록 닫기'}).click();await page.getByRole('button',{name:'부두에서 낚시하기'}).click();await saved(page);
+ await page.clock.fastForward(600_000);expect((await saved(page)).games.coast).toMatchObject({fish:0,lastReport:null});await page.clock.fastForward(300_000);expect((await saved(page)).games.coast).toMatchObject({fish:3,activity:'fish',workInterval:15,lastReport:{amount:3,id:1,cycles:1}});
+ await expect(page.getByRole('timer')).toHaveText('낚시 15:00 · 물고기 +3');await page.getByRole('button',{name:'기록과 백업',exact:true}).click();await expect(page.getByRole('button',{name:'정산 간격 10분',exact:true})).toBeDisabled();
+ await page.reload();await saved(page);await expect(page.getByRole('timer')).toHaveText('낚시 15:00 · 물고기 +3');
 });

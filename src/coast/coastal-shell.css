@@ -53,3 +53,6 @@ button { font: inherit; }
 .coast-shell-error button { display: block; }
 .coast-compact-error { position: absolute; left: 70px; top: 4px; text-shadow: -1px 0 #f5efe3,1px 0 #f5efe3,0 -1px #f5efe3,0 1px #f5efe3; }
 .coast-waiting { display: flex; align-items: center; justify-content: center; height: 100%; font-size: 11px; color: #304940; text-shadow: -1px 0 #f5efe3,1px 0 #f5efe3,0 -1px #f5efe3,0 1px #f5efe3; }
+.coast-interval { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 7px 0; }
+.coast-interval button[aria-pressed="true"] { text-decoration: underline; text-underline-offset: 3px; }
+.coast-house-panel small { display: block; }

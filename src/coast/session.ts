@@ -1,6 +1,7 @@
 import {initialState,parseState,SaveQueue,type AppState} from '../core/state';
 import {nextRevision} from '../core/lifecycle';
-import {advanceCoast,PROJECTS,projectCost,sellFish,startActivity,type CoastalAction,type CoastalState} from './model';
+import {advanceCoast,PROJECTS,projectCost,sellFish,startActivity,stopWork,setWorkInterval,isWork,type CoastalAction,type CoastalState} from './model';
+import {workReportText} from './workText';
 
 export interface SessionPort {
   load:()=>Promise<AppState|null>;
@@ -35,6 +36,7 @@ export class CoastalSession {
   private pendingRetry:RetrySnapshot|null=null;
   private loading:Promise<void>|null=null;
   private closingTask:Promise<boolean>|null=null;
+  private uncheckpointedMs=0;
 
   constructor(private readonly port:SessionPort){this.queue=new SaveQueue(state=>this.port.save(state));}
 
@@ -61,6 +63,7 @@ export class CoastalSession {
     return copyState({...current,revision:nextRevision(current.revision),updatedAt:new Date().toISOString(),games:{...current.games,coast}});
   }
   private adopt(state:AppState,notice?:string){
+    this.uncheckpointedMs=0;
     this.publish({state,coast:state.games.coast,ready:true,saveFailed:false,saveStatus:'저장 완료',error:'',...(notice===undefined?{}:{notice})});
   }
   private async saveAndAdopt(state:AppState,notice:string|undefined,generation=this.generation):Promise<boolean>{
@@ -92,7 +95,7 @@ export class CoastalSession {
       try {
         const stored=await this.port.load();
         if(stored===null)await this.saveAndAdopt(initialState(),'부두 · 해변 · 집을 눌러보세요');
-        else this.adopt(copyState(stored),'부두 · 해변 · 집을 눌러보세요');
+        else this.adopt(copyState(stored),stored.games.coast.activity?'':'부두 · 해변 · 집을 눌러보세요');
       }catch(cause){this.publish({state:null,coast:null,saveStatus:'확인 필요',error:`기록을 불러오지 못했습니다. 원본은 보존했습니다. ${errorText(cause)} 백업에서 복원할 수 있습니다.`});}
       finally {this.publish({ready:true});}
     });
@@ -125,14 +128,31 @@ export class CoastalSession {
     });
   }
 
+  stop():Promise<void>{
+    if(!this.canChange())return Promise.resolve();
+    const current=this.view.coast!,next=stopWork(current);if(next===current)return Promise.resolve();
+    return this.enqueue(async()=>{await this.saveAndAdopt(this.snapshotFor(next),'작업을 마쳤어요. 모은 재료는 그대로 남아요.');});
+  }
+
+  changeInterval(minutes:10|15):Promise<void>{
+    if(!this.canChange())return Promise.resolve();
+    const current=this.view.coast!,next=setWorkInterval(current,minutes);if(next===current)return Promise.resolve();
+    return this.enqueue(async()=>{await this.saveAndAdopt(this.snapshotFor(next),`작업 자원은 ${minutes}분마다 정산해요.`);});
+  }
+
   advance(deltaMs:number):void {
     if(!this.canChange())return;
     const previous=this.view.coast!,next=advanceCoast(previous,deltaMs);
     if(next===previous)return;
-    if(next.activity!==null){this.publish({coast:next});return;}
+    const reportChanged=next.lastReport?.id!==previous.lastReport?.id;
+    if(next.activity!==null&&!reportChanged){
+      this.publish({coast:next});this.uncheckpointedMs+=deltaMs;
+      if(this.uncheckpointedMs>=60_000)void this.checkpoint();
+      return;
+    }
     const generation=this.generation;
     const item=PROJECTS.find(project=>project.action===previous.activity);
-    const notice=previous.activity==='fish'?`물고기 ${next.fish-previous.fish}마리를 집 앞에 걸었어요.`:previous.activity==='gather'?`나무 ${next.wood-previous.wood}개를 주웠어요.`:previous.activity==='upgrade'?`집 ${next.houseLevel}단계 완성 · 낚시·채집 보상 ${next.houseLevel}개`:item?`${item.name}를 놓았어요.`:'';
+    const notice=reportChanged?workReportText(next.lastReport):isWork(previous.activity)?'보관할 수 있는 양에 도달해 작업을 마쳤어요.':previous.activity==='upgrade'?`집 ${next.houseLevel}단계 완성`:item?`${item.name}를 놓았어요.`:'';
     void this.enqueue(async()=>{
       try {await this.saveAndAdopt(this.snapshotFor(next),notice,generation);}
       catch(cause){this.setError(`진행을 마치지 못했습니다. ${errorText(cause)}`);}

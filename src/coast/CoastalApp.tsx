@@ -20,9 +20,17 @@ export default function CoastalApp(){
  const [pending,setPending]=useState<PendingCoastBackup|null>(null);
  const input=useRef<HTMLInputElement>(null),active=useRef(true),closingRef=useRef(false),resizingRef=useRef(platform.desktop);
  const pendingResize=useRef<Promise<void>>(Promise.resolve());
+ const importEpoch=useRef(0);
  const error=[view.error,windowError].filter(Boolean).join(' ');
  const blocked=!view.ready||!view.coast||view.busy||view.saveFailed||resizing||closing;
  const scenePaused=paused||hidden||compact||houseOpen||recordOpen||blocked;
+
+ useEffect(()=>{
+  if(paused||blocked||pending)return;
+  let last=Date.now();
+  const timer=window.setInterval(()=>{const now=Date.now();const delta=Math.max(0,now-last);last=now;advance(delta);},250);
+  return()=>window.clearInterval(timer);
+ },[paused,blocked,pending,advance]);
 
  async function requestExit(){
   if(!platform.desktop||closingRef.current)return;
@@ -46,11 +54,12 @@ export default function CoastalApp(){
    finally{resizingRef.current=false;if(!cancelled)setResizing(false);}
   }
   pendingResize.current=start();
-  return()=>{cancelled=true;active.current=false;document.removeEventListener('visibilitychange',visibility);stops.forEach(stop=>stop());};
+  return()=>{cancelled=true;active.current=false;importEpoch.current+=1;document.removeEventListener('visibilitychange',visibility);stops.forEach(stop=>stop());};
  },[session]);
 
  async function resize(next:boolean){
   if(resizingRef.current||closingRef.current)return false;
+  if(next)cancelPreview();
   resizingRef.current=true;setResizing(true);setWindowError('');
   const operation=(async()=>{if(!await session.checkpoint())throw new Error('먼저 저장을 다시 시도해 주세요.');await platform.applyWindow({alwaysOnTop:false,compact:next});if(active.current)setCompact(next);})();
   pendingResize.current=operation;
@@ -58,20 +67,26 @@ export default function CoastalApp(){
   finally{resizingRef.current=false;if(active.current)setResizing(false);}
  }
  async function togglePause(){const next=!paused;setPaused(next);if(next)await session.checkpoint();}
- async function openHouse(){if(!view.coast||view.busy)return;setHouseOpen(true);setRecordOpen(false);await session.checkpoint();}
- async function toggleRecords(){if(compact&&!await resize(false))return;setHouseOpen(false);setRecordOpen(!recordOpen);if(!recordOpen)await session.checkpoint();}
+ function cancelPreview(){importEpoch.current+=1;setPending(null);}
+ function closeRecords(){cancelPreview();setRecordOpen(false);}
+ async function openHouse(){if(!view.coast||view.busy)return;cancelPreview();setHouseOpen(true);setRecordOpen(false);await session.checkpoint();}
+ async function toggleRecords(){if(compact&&!await resize(false))return;cancelPreview();setHouseOpen(false);setRecordOpen(!recordOpen);if(!recordOpen)await session.checkpoint();}
  function startProject(action:CoastalAction){if(paused||hidden||compact||blocked)return;setHouseOpen(false);void session.start(action);}
  function sell(){if(paused||hidden||compact||blocked)return;void session.sell();}
- function preview(text:string){
+ function stop(){if(blocked)return;void session.stop();}
+ function preview(text:string,epoch:number){
+  if(epoch!==importEpoch.current||!active.current)return;
   try{const state=decodeBackup(text);const source=JSON.parse(text);setPending({state,sourceVersion:source.state.schemaVersion});session.setError('');}
   catch(cause){setPending(null);session.setError(`백업을 읽지 못했습니다. ${message(cause)}`);}
  }
  async function importBackup(){
+  const epoch=++importEpoch.current;setPending(null);
   if(!await session.checkpoint()&&!view.saveFailed&&view.state)return;
-  if(platform.desktop){try{const raw=await platform.readNativeBackup();if(raw!==null)preview(raw);}catch(cause){session.setError(`백업을 읽지 못했습니다. ${message(cause)}`);}}
+  if(epoch!==importEpoch.current||!active.current)return;
+  if(platform.desktop){try{const raw=await platform.readNativeBackup();if(raw!==null)preview(raw,epoch);}catch(cause){if(epoch===importEpoch.current&&active.current)session.setError(`백업을 읽지 못했습니다. ${message(cause)}`);}}
   else input.current?.click();
  }
- async function restore(){if(!pending)return;if(await session.restore(pending.state)){setPending(null);setWindowError('');}}
+ async function restore(){if(!pending)return;if(await session.restore(pending.state)){cancelPreview();setWindowError('');}}
  const uiBusy=view.busy||resizing||closing;
  return <div className={`coast-shell${compact?' coast-compact':''}`} data-paused={scenePaused}>
   <header className="coast-titlebar">
@@ -85,12 +100,12 @@ export default function CoastalApp(){
    </div>
   </header>
   <main className="coast-scene-area" hidden={compact}>
-   {view.coast?<CoastalScene state={view.coast} paused={scenePaused} disabled={blocked} notice={view.notice} onAction={startProject} onAdvance={advance} onHouse={()=>void openHouse()} onSell={sell}/>:<div className="coast-waiting">{view.ready?'기록을 확인해 주세요':'해안을 불러오는 중'}</div>}
+   {view.coast?<CoastalScene state={view.coast} paused={scenePaused} disabled={blocked} notice={view.notice} onAction={startProject} onStop={stop} onHouse={()=>void openHouse()} onSell={sell}/>:<div className="coast-waiting">{view.ready?'기록을 확인해 주세요':'해안을 불러오는 중'}</div>}
   </main>
   {!compact&&!recordOpen&&error&&<div className="coast-shell-error" role="alert">{error}{view.saveFailed&&<button type="button" disabled={uiBusy} onClick={()=>void session.retry()}>저장 다시 시도</button>}</div>}
   {compact&&error&&<button type="button" className="coast-compact-error" aria-label="저장 오류 확인하고 펼치기" onClick={()=>void toggleRecords()}>저장 확인</button>}
-  {!compact&&houseOpen&&view.coast&&<HousePanel state={view.coast} disabled={blocked||paused||view.coast.activity!==null} onProject={startProject} onSell={sell} onClose={()=>setHouseOpen(false)}/>}
-  {!compact&&recordOpen&&<RecordPanel state={view.state} busy={uiBusy} saveFailed={view.saveFailed} saveStatus={view.saveStatus} error={error} pending={pending} onExport={()=>void session.exportBackup()} onImport={()=>void importBackup()} onRestore={()=>void restore()} onCancel={()=>setPending(null)} onRetry={()=>void session.retry()} onClose={()=>{setPending(null);setRecordOpen(false);}}/>}
-  <input type="file" ref={input} className="coast-sr-only" tabIndex={-1} aria-label="백업 파일 선택" accept=".cornerbits,application/json" onChange={event=>{const file=event.target.files?.[0];event.target.value='';if(!file)return;if(file.size>2*1024*1024){session.setError('백업 파일은 2 MiB 이하여야 합니다.');return;}void file.text().then(preview).catch(cause=>session.setError(message(cause)));}}/>
+  {!compact&&houseOpen&&view.coast&&<HousePanel state={view.coast} disabled={blocked||paused} onProject={startProject} onSell={sell} onStop={stop} onClose={()=>setHouseOpen(false)}/>}
+  {!compact&&recordOpen&&<RecordPanel state={view.state} busy={uiBusy} saveFailed={view.saveFailed} saveStatus={view.saveStatus} error={error} pending={pending} onInterval={minutes=>void session.changeInterval(minutes)} onExport={()=>void session.exportBackup()} onImport={()=>void importBackup()} onRestore={()=>void restore()} onCancel={cancelPreview} onRetry={()=>void session.retry()} onClose={closeRecords}/>}
+  <input type="file" ref={input} className="coast-sr-only" tabIndex={-1} aria-label="백업 파일 선택" accept=".cornerbits,application/json" onChange={event=>{const epoch=++importEpoch.current;const file=event.target.files?.[0];event.target.value='';if(!file)return;setPending(null);if(file.size>2*1024*1024){session.setError('백업 파일은 2 MiB 이하여야 합니다.');return;}void file.text().then(text=>preview(text,epoch)).catch(cause=>{if(epoch===importEpoch.current&&active.current)session.setError(message(cause));});}}/>
  </div>;
 }
