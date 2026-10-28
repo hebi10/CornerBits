@@ -57,4 +57,6 @@ npm run check:native
 
 Windows 창·트레이·네이티브 파일 선택 대화상자는 데스크톱 실행 검증이 별도로 필요합니다.
 
-현재 작업 환경에서는 Windows 애플리케이션 제어 정책(오류 4551)이 Cargo 빌드 스크립트 실행을 차단해 네이티브 빌드·실행을 확인하지 못했습니다. 자세한 결과는 [검증 기록](docs/verification.md)에 있습니다.
+현재 PC에서 최소 개발 도구 구성으로 빌드할 때는 먼저 `. .\.tools\native-env.ps1`을 실행합니다. `.tools/`는 이 PC에만 준비한 폴더로 Git에 포함하지 않습니다.
+
+2026-10-28에 네이티브 테스트 19개, Windows 정식 실행 파일 빌드와 실제 앱의 백업 내보내기·복원 및 종료 후 재실행을 확인했습니다. 정식 실행 파일은 `src-tauri/target/release/cornerbits.exe`입니다. 자세한 결과와 수동 확인 범위는 [검증 기록](docs/verification.md)에 있습니다.
