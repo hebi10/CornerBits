@@ -130,11 +130,11 @@ describe('mine economy', () => {
   });
 
   it('requires both the current level depth gate and squared upgrade price', () => {
-    const tooShallow = { ...emptyFloor(199), pickaxe: 2, coins: 4000 };
+    const tooShallow = { ...emptyFloor(79), pickaxe: 2, coins: 2000 };
     expect(reduceMine(tooShallow, { type: 'upgrade' })).toBe(tooShallow);
-    const tooPoor = { ...tooShallow, depth: 200, coins: 3999 };
+    const tooPoor = { ...tooShallow, depth: 80, coins: 1999 };
     expect(reduceMine(tooPoor, { type: 'upgrade' })).toBe(tooPoor);
-    const ready = { ...tooPoor, coins: 4000 };
+    const ready = { ...tooPoor, coins: 2000 };
     expect(reduceMine(ready, { type: 'upgrade' })).toEqual({ ...ready, pickaxe: 3, coins: 0 });
     expect(ready.pickaxe).toBe(2);
     const max = { ...ready, depth: 1000, pickaxe: 10, coins: 1_000_000 };
@@ -211,8 +211,8 @@ describe('long-term mine progression', () => {
     expect(state.pickaxe).toBe(10);
     expect(state.collected.filter((count) => count > 0)).toHaveLength(30);
     expect(state.totalMined).toBe(25_000);
-    // The level-2 upgrade at floor 100 makes its 25 HP-2 blocks one-hit blocks.
-    expect(hits).toBe(49_975);
+    // Earlier, cheaper upgrades reduce repetitive hits without changing saved HP.
+    expect(hits).toBe(40_400);
     expect(reduceMine(state, { type: 'descend' }).depth).toBe(1001);
   });
 });

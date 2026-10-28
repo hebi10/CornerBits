@@ -1,8 +1,9 @@
 .garden { min-width: 0; }
-.garden-tools { display: grid; grid-template-columns: 22px minmax(0, 1fr) 30px; gap: 5px; margin-top: 7px; align-items: center; }
+.garden-tools { display: grid; grid-template-columns: 28px minmax(0, 1fr) 32px; gap: 8px; height: 34px; align-items: center; }
 .garden-seed-art { width: 22px; height: 22px; }
-.garden-tools select { width: 100%; min-width: 0; height: 24px; border: 0; border-radius: 0; padding: 2px 4px; background: rgb(245 245 243 / 88%); color: #252525; font: inherit; font-size: 10px; }
-.garden-tools select:disabled { color: #777; background: rgb(245 245 243 / 88%); }
+.garden-tools select { width: 100%; min-width: 0; height: 24px; border: 0; border-radius: 0; padding: 2px 4px; background: transparent; color: #252525; font: inherit; font-size: 11px; }
+.garden-tools select option { color: #252525; background: #f5f5f3; text-shadow: none; }
+.garden-tools select:disabled { color: #777; background: transparent; }
 .garden-tools button, .garden-tools button:disabled { width: 30px; height: 30px; min-height: 30px; border: 0; padding: 0; background: transparent; }
 .garden-tools button:disabled .garden-expand-art { opacity: .4; }
 .garden-expand-art { width: 28px; height: 28px; }
@@ -28,16 +29,24 @@
 .garden-details summary { display: flex; justify-content: center; align-items: center; width: 32px; height: 32px; margin-left: auto; list-style: none; cursor: pointer; padding: 0; background: transparent; }
 .garden-details summary::-webkit-details-marker { display: none; }
 .garden-menu-art { width: 29px; height: 29px; }
-.garden-details-body { max-height: 210px; overflow-y: auto; padding: 1px 6px 4px; background: rgb(245 245 243 / 88%); }
-.garden-details-body p { margin: 7px 0 10px; color: #595959; font-size: 11px; line-height: 1.65; word-break: keep-all; }
-.garden-collection { list-style: none; padding: 0; margin: 0; }
-.garden-collection li { display: flex; align-items: center; gap: 6px; padding: 5px 3px; }
-.garden-collection-art { width: 30px; height: 30px; }
-.garden-collection-copy { flex: 1; min-width: 0; }
-.garden-collection-copy > div { display: flex; justify-content: space-between; gap: 6px; }
-.garden-collection small { display: block; margin-top: 3px; font-size: 10px; color: #595959; }
-.garden-locked { color: #595959; }
-.garden-locked .garden-collection-art { opacity: 0.4; }
+.garden:has(.garden-details[open]) .garden-pots { display: none; }
+.shell-game .garden .garden-details[open] { padding: 0; background: transparent; }
+.garden-details-body { display: flex; flex-direction: column; gap: 2px; overflow: visible; padding: 0 3px; background: transparent; }
+.garden-details-body p { margin: 0; color: #252525; font-size: 10px; line-height: 1.6; word-break: keep-all; }
+.garden-details-body p, .garden-details-body select, .garden-details-body button, .garden-catalog-pages { text-shadow: -1px 0 #f5f5f3, 1px 0 #f5f5f3, 0 -1px #f5f5f3, 0 1px #f5f5f3; }
+.garden-catalog-stats { height: 16px; }
+.garden-next-seed { min-height: 16px; }
+.garden-collection { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(2, 61px); gap: 0 3px; padding: 0; margin: 0; }
+.garden-seed-choice { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 0; min-height: 0; padding: 0; gap: 0; background: transparent; font-size: 9px; line-height: 1.25; }
+.garden-collection-art { width: 39px; height: 39px; }
+.garden-seed-choice[aria-pressed="true"] .garden-collection-art { width: 46px; height: 46px; }
+.garden-seed-choice[aria-pressed="true"] { font-weight: 700; }
+.garden-seed-choice.garden-locked { color: #595959; }
+.garden-locked .garden-collection-art { opacity: .3; }
+.garden-catalog-pages { display: flex; align-items: center; justify-content: center; gap: 15px; height: 24px; font-size: 10px; }
+.garden-catalog-pages button { min-height: 24px; padding: 2px 5px; font-size: 10px; }
+.garden-care { height: 122px; display: flex; flex-direction: column; justify-content: center; gap: 7px; padding: 0 5px; }
+.garden-care-toggle { align-self: center; min-height: 20px; padding: 1px 5px; font-size: 10px; }
 @keyframes garden-sway { 0%, 100% { transform: rotate(-1deg); } 50% { transform: rotate(1deg); } }
 @keyframes garden-water { 0% { opacity: 1; transform: translate(-50%, -5px) rotate(0); } 45% { opacity: 1; transform: translate(-50%, 0) rotate(-18deg); } 100% { opacity: 0; transform: translate(-50%, 4px) rotate(-18deg); } }
 @keyframes garden-harvest { from { opacity: 1; transform: translate(-50%, 0); } to { opacity: 0; transform: translate(-50%, -18px); } }

@@ -26,9 +26,9 @@ test('version two migration preserves exact original bytes and both games', asyn
   await page.addInitScript(value => localStorage.setItem('cornerbits.preview.state', value), original);
   await page.goto('/');
   const state = await saved(page);
-  expect(state.schemaVersion).toBe(3);
+  expect(state.schemaVersion).toBe(4);
   expect(state.games.mine).toEqual(backup.state.games.mine);
-  expect(state.games.garden).toEqual(backup.state.games.garden);
+  expect(state.games.garden).toEqual({ ...backup.state.games.garden, unlockedSpecies: 1 });
   expect(state.games.circuit.totalClears).toBe(0);
   const snapshots = await page.evaluate(() => Object.keys(localStorage).filter(key => key.startsWith('cornerbits.preview.pre-migration.')).map(key => localStorage.getItem(key)));
   expect(snapshots).toEqual([original]);

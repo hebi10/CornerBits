@@ -1,9 +1,9 @@
 import { initialMine, parseMine, type MineState } from '../games/mine';
-import { initialGarden, parseGarden, type GardenState } from '../games/garden';
+import { initialGarden, migrateGarden, parseGarden, type GardenState } from '../games/garden';
 import { initialCircuit, parseCircuit, type CircuitState } from '../games/circuit';
 
 export interface AppState {
-  schemaVersion: 3;
+  schemaVersion: 4;
   revision: number;
   updatedAt: string;
   settings: { alwaysOnTop: boolean; compact: boolean };
@@ -51,7 +51,7 @@ function validateState(value: unknown): AppState {
   if (!isRecord(value)) {
     throw new Error('저장 파일 형식이 올바르지 않습니다.');
   }
-  if (value.schemaVersion !== 1 && value.schemaVersion !== 2 && value.schemaVersion !== 3) {
+  if (value.schemaVersion !== 1 && value.schemaVersion !== 2 && value.schemaVersion !== 3 && value.schemaVersion !== 4) {
     throw new Error('지원하지 않는 저장 버전입니다. CornerBits 버전을 확인해 주세요.');
   }
   const keys = ['schemaVersion', 'revision', 'updatedAt', 'settings'];
@@ -77,10 +77,10 @@ function validateState(value: unknown): AppState {
     if (!isRecord(value.games) || !hasExactKeys(value.games, value.schemaVersion === 2 ? ['mine', 'garden'] : ['mine', 'garden', 'circuit'])) {
       throw new Error('게임 기록 형식이 올바르지 않습니다.');
     }
-    games = { mine: parseMine(value.games.mine), garden: parseGarden(value.games.garden), circuit: value.schemaVersion === 2 ? initialCircuit() : parseCircuit(value.games.circuit) };
+    games = { mine: parseMine(value.games.mine), garden: value.schemaVersion === 4 ? parseGarden(value.games.garden) : migrateGarden(value.games.garden), circuit: value.schemaVersion === 2 ? initialCircuit() : parseCircuit(value.games.circuit) };
   }
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     revision: value.revision,
     updatedAt: value.updatedAt,
     settings: { alwaysOnTop: settings.alwaysOnTop, compact: settings.compact },
@@ -90,7 +90,7 @@ function validateState(value: unknown): AppState {
 
 export function initialState(): AppState {
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     revision: 0,
     updatedAt: new Date().toISOString(),
     settings: { alwaysOnTop: false, compact: false },

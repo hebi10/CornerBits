@@ -13,11 +13,24 @@ const LIMIT = 1_000_000_000_000;
 
 function planted(species = 0, at = 1_000): GardenState {
   const state = initialGarden();
-  if (species > 0) { state.harvested[species - 1] = 5; state.totalHarvests = 5; }
+  if (species > 0) { state.unlockedSpecies = species + 1; }
   return reduceGarden(state, { type: 'plant', index: 0, species }, at);
 }
 
 describe('garden actions', () => {
+  it('keeps unlocked seeds permanent and unlocks later seeds at their own harvest target', () => {
+    const state = initialGarden();
+    expect(state.unlockedSpecies).toBe(1);
+    state.unlockedSpecies = 3;
+    state.harvested[2] = 19;
+    state.totalHarvests = 19;
+    const growing = reduceGarden(state, { type: 'plant', index: 0, species: 2 }, 0);
+    const harvested = reduceGarden(growing, { type: 'harvest', index: 0 }, 120_000);
+    expect(harvested.unlockedSpecies).toBe(4);
+    expect(isSpeciesUnlocked(harvested, 1)).toBe(true);
+    expect(isSpeciesUnlocked(harvested, 3)).toBe(true);
+    expect(isSpeciesUnlocked(harvested, 4)).toBe(false);
+  });
   it('starts with free seeds and three empty pots, and leaves its inputs untouched', () => {
     const state = initialGarden();
     const next = reduceGarden(state, { type: 'plant', index: 0, species: 0 }, 1_000);
@@ -77,7 +90,7 @@ describe('garden actions', () => {
     expect(next.pots[1]?.plantedAt).toBe(61_000);
   });
 
-  it('unlocks each next species after five harvests of its immediate predecessor', () => {
+  it('opens the first new seed after five harvests and keeps later seeds locked', () => {
     let state = initialGarden();
     for (let i = 0; i < 5; i++) {
       state = reduceGarden(state, { type: 'plant', index: 0, species: 0 }, i * MINUTE);
@@ -90,7 +103,7 @@ describe('garden actions', () => {
     expect(isSpeciesUnlocked(state, 40)).toBe(false);
   });
 
-  it.each([[1, 300_000], [2, 1_800_000], [3, 21_600_000], [7, 21_600_000], [8, 115_200_000], [19, 115_200_000], [20, 172_800_000], [39, 172_800_000]])(
+  it.each([[1, 90_000], [2, 120_000], [3, 180_000], [7, 180_000], [8, 180_000], [19, 180_000], [20, 180_000], [39, 180_000]])(
     'species %i cannot be harvested before its full duration', (species, duration) => {
       const state = planted(species, 0);
       expect(reduceGarden(state, { type: 'harvest', index: 0 }, duration - 1)).toBe(state);
@@ -98,10 +111,10 @@ describe('garden actions', () => {
     },
   );
 
-  it('watered middle-tier plants mature exactly at the next daily visit', () => {
+  it('watered middle-tier plants finish during a short play session', () => {
     const state = reduceGarden(planted(8, 0), { type: 'water', index: 0 }, 0);
-    expect(reduceGarden(state, { type: 'harvest', index: 0 }, DAY - 1)).toBe(state);
-    expect(reduceGarden(state, { type: 'harvest', index: 0 }, DAY).coins).toBe(55);
+    expect(reduceGarden(state, { type: 'harvest', index: 0 }, 134_999)).toBe(state);
+    expect(reduceGarden(state, { type: 'harvest', index: 0 }, 135_000).coins).toBe(55);
   });
 
   it('expands at escalating prices up to twelve pots', () => {
@@ -159,53 +172,14 @@ describe('garden schema', () => {
     { ...initialGarden(), harvested: [1, ...Array(39).fill(0)] },
     { ...initialGarden(), harvested: [LIMIT, 1, ...Array(38).fill(0)], totalHarvests: LIMIT },
     { ...initialGarden(), lastObservedAt: 8_640_000_000_000_001 },
+    { ...initialGarden(), unlockedSpecies: 0 }, { ...initialGarden(), unlockedSpecies: 41 },
+    { ...initialGarden(), unlockedSpecies: 1.5 }, { ...initialGarden(), unlockedSpecies: undefined },
     { ...initialGarden(), pots: [{ species: 40, plantedAt: 0, watered: false }, null, null] },
     { ...initialGarden(), pots: [{ species: 0, plantedAt: 1, watered: false }, null, null] },
     { ...initialGarden(), pots: [{ species: 0, plantedAt: 0, watered: 0 }, null, null] },
     { ...initialGarden(), pots: [{ species: 0, plantedAt: 0, watered: false, extra: true }, null, null] },
   ])('rejects malformed, incomplete, and inconsistent state %#', (value) => {
     expect(() => parseGarden(value)).toThrow();
-  });
-});
-
-describe('garden pacing simulation', () => {
-  it.each([1, 2])('reaches all species and twelve pots with %i visits per day totaling ten minutes', (visits) => {
-    let state = initialGarden();
-    let allSpeciesDay: number | null = null;
-    let allPotsDay: number | null = null;
-    let allHarvestedDay: number | null = null;
-    // Deterministic routine: evenly spaced visits, tend every five seconds, expand when
-    // affordable, then plant and water the most recently unlocked species.
-    for (let day = 0; day < 180 && allHarvestedDay === null; day++) {
-      for (let visit = 0; visit < visits; visit++) {
-        for (let second = 0; second <= 600 / visits; second += 5) {
-          const now = day * DAY + visit * DAY / visits + second * 1_000;
-          for (let index = 0; index < state.pots.length; index++) {
-            state = reduceGarden(state, { type: 'harvest', index }, now);
-          }
-          while (state.pots.length < 12 && state.coins >= expansionCost(state)) {
-            state = reduceGarden(state, { type: 'expand' }, now);
-          }
-          const species = PLANTS.reduce((latest, _, index) => isSpeciesUnlocked(state, index) ? index : latest, 0);
-          for (let index = 0; index < state.pots.length; index++) {
-            if (state.pots[index] === null) state = reduceGarden(state, { type: 'plant', index, species }, now);
-            state = reduceGarden(state, { type: 'water', index }, now);
-          }
-          if (allSpeciesDay === null && isSpeciesUnlocked(state, 39)) allSpeciesDay = day + 1;
-          if (allPotsDay === null && state.pots.length === 12) allPotsDay = day + 1;
-          if (state.harvested.every((count) => count > 0)) allHarvestedDay = day + 1;
-        }
-      }
-    }
-    expect(allSpeciesDay).not.toBeNull();
-    expect(allPotsDay).not.toBeNull();
-    expect(allHarvestedDay).not.toBeNull();
-    // Guard the initial balance under this exact routine; this is not a promise
-    // about real players' completion time.
-    expect(allHarvestedDay).toBeGreaterThanOrEqual(visits === 1 ? 50 : 40);
-    expect(allHarvestedDay).toBeLessThanOrEqual(visits === 1 ? 65 : 55);
-    expect(parseGarden(state)).toEqual(state);
-    console.info(`Garden ${visits} visits/day: all 40 species unlocked day ${allSpeciesDay}; 12 pots day ${allPotsDay}; all species harvested day ${allHarvestedDay}.`);
   });
 });
 

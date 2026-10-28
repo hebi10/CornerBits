@@ -51,6 +51,7 @@ export default function Circuit({ state, onAction, disabled }: { state: CircuitS
         {Array.from({ length: unlocked }, (_, index) => <option key={index + 1} value={index + 1}>{index + 1}번{state.records[index] ? ` · ${state.records[index]}회` : ' · 도전 중'}</option>)}
       </select></label>
       <p>완료한 회로에 다시 도전해 내 기록을 줄여 보세요. 누적 {state.totalClears.toLocaleString('ko-KR')}회 완료했어요.</p>
+      <p>10~15분 동안 작은 회로는 6~7개, 큰 회로는 4개 정도를 권해요. 풀이 속도에 맞춰 자유롭게 즐기세요.</p>
     </details>
   </section>;
 }

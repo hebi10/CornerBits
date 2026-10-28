@@ -108,6 +108,8 @@ pub struct Plant {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct GardenState {
     #[serde(deserialize_with = "deserialize_integer")]
+    pub unlocked_species: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
     pub coins: u64,
     pub pots: Vec<Option<Plant>>,
     #[serde(deserialize_with = "deserialize_integers")]
@@ -121,6 +123,7 @@ pub struct GardenState {
 impl Default for GardenState {
     fn default() -> Self {
         Self {
+            unlocked_species: 1,
             coins: 0,
             pots: vec![None; 3],
             harvested: vec![0; 40],
@@ -132,7 +135,8 @@ impl Default for GardenState {
 
 impl GardenState {
     fn validate(&self) -> Result<(), String> {
-        if self.coins > MAX_COUNT
+        if !(1..=40).contains(&self.unlocked_species)
+            || self.coins > MAX_COUNT
             || !(3..=12).contains(&self.pots.len())
             || self.harvested.len() != 40
             || !valid_total(&self.harvested, self.total_harvests)
@@ -146,6 +150,55 @@ impl GardenState {
             return Err("정원 저장 데이터가 올바르지 않습니다.".into());
         }
         Ok(())
+    }
+}
+
+// v2/v3 gardens had no permanent unlock count. Keep their exact shape strict
+// rather than making the v4 field optional at the IPC/storage boundary.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct LegacyGardenState {
+    #[serde(deserialize_with = "deserialize_integer")]
+    coins: u64,
+    pots: Vec<Option<Plant>>,
+    #[serde(deserialize_with = "deserialize_integers")]
+    harvested: Vec<u64>,
+    #[serde(deserialize_with = "deserialize_integer")]
+    total_harvests: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    last_observed_at: u64,
+}
+
+impl From<LegacyGardenState> for GardenState {
+    fn from(previous: LegacyGardenState) -> Self {
+        let mut unlocked_species = 1;
+        for species in 0..40 {
+            if species == 0
+                || previous
+                    .harvested
+                    .get(species - 1)
+                    .is_some_and(|count| *count >= 5)
+                || previous
+                    .harvested
+                    .get(species)
+                    .is_some_and(|count| *count > 0)
+                || previous
+                    .pots
+                    .iter()
+                    .flatten()
+                    .any(|plant| plant.species >= species as u64)
+            {
+                unlocked_species = species as u64 + 1;
+            }
+        }
+        Self {
+            unlocked_species,
+            coins: previous.coins,
+            pots: previous.pots,
+            harvested: previous.harvested,
+            total_harvests: previous.total_harvests,
+            last_observed_at: previous.last_observed_at,
+        }
     }
 }
 

@@ -28,7 +28,11 @@ export function mineDurability(depth: number): number {
 }
 
 export function upgradeCost(pickaxe: number): number {
-  return 1000 * pickaxe * pickaxe;
+  return 500 * pickaxe * pickaxe;
+}
+
+export function upgradeDepthRequired(pickaxe: number): number {
+  return 40 * pickaxe;
 }
 
 export function saleValue(inventory: readonly number[]): number {
@@ -74,7 +78,7 @@ export function reduceMine(state: MineState, action: MineAction): MineState {
     }
     case 'upgrade': {
       const cost = upgradeCost(state.pickaxe);
-      if (state.pickaxe >= 10 || state.depth < 100 * state.pickaxe || state.coins < cost) return state;
+      if (state.pickaxe >= 10 || state.depth < upgradeDepthRequired(state.pickaxe) || state.coins < cost) return state;
       return { ...state, pickaxe: state.pickaxe + 1, coins: state.coins - cost };
     }
     default: return state;

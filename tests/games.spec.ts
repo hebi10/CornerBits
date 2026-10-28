@@ -43,7 +43,7 @@ test('legacy save migration preserves the original and settings', async ({ page 
   await page.evaluate((value) => localStorage.setItem('cornerbits.preview.state', value), JSON.stringify(legacy));
   await page.reload();
   const state = await saved(page);
-  expect(state.schemaVersion).toBe(3);
+  expect(state.schemaVersion).toBe(4);
   expect(state.settings).toEqual(legacy.settings);
   const originals = await page.evaluate(() => Object.keys(localStorage).filter((key) => key.startsWith('cornerbits.preview.pre-migration.')).map((key) => localStorage.getItem(key)));
   expect(originals).toEqual([JSON.stringify(legacy)]);

@@ -26,6 +26,7 @@ Three independent games with persistent growth: a 5×5 mine, an offline growing 
 
 - Small monochrome desktop decoration with cute smiling mineral/plant/lightbulb sprites and quiet motion, explicitly requested on 2026-10-28. Picture controls replace persistent text buttons and scores; exact information is available through tooltips and expandable tools. Management matches the same transparent keepsake-box style. No shadows, rounded cards, or unsolicited sound.
 - Growth and mining damage should be visible in the art; exact names and counts remain available in controls and collections. Honor reduced motion and pause hidden content.
+- Progress is tuned without daily limits. Use the reproducible pacing model in docs/balance.md: about 58–59 modeled days at 12.5 minutes per game, with garden growth waits and assumed circuit thinking time stated explicitly. Garden seeds stay permanently unlocked across balance updates.
 - Preserve saved data outside the installation directory.
 - Backup and restore must validate input and preserve the current state before replacement.
 - No server, accounts, push, or publication in the current phase.

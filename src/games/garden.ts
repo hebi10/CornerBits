@@ -10,6 +10,7 @@ export interface GardenState {
   harvested: number[];
   totalHarvests: number;
   lastObservedAt: number;
+  unlockedSpecies: number;
 }
 
 export type GardenAction =
@@ -21,7 +22,6 @@ export type GardenAction =
 const MAX_COUNT = 1_000_000_000_000;
 const MAX_TIMESTAMP = 8_640_000_000_000_000;
 const MINUTE = 60_000;
-const HOUR = 60 * MINUTE;
 
 export const PLANTS: readonly { name: string; growMs: number }[] = [
   '새싹', '클로버', '민들레', '데이지', '팬지', '봉선화', '메리골드', '코스모스',
@@ -31,12 +31,16 @@ export const PLANTS: readonly { name: string; growMs: number }[] = [
   '알스트로메리아', '아네모네', '리시안셔스', '동백', '치자', '자스민', '목련', '에델바이스',
 ].map((name, index) => ({
   name,
-  growMs: index === 0 ? MINUTE : index === 1 ? 5 * MINUTE : index === 2 ? 30 * MINUTE
-    : index < 8 ? 6 * HOUR : index < 20 ? 32 * HOUR : 48 * HOUR,
+  growMs: index === 0 ? MINUTE : index === 1 ? 90_000 : index === 2 ? 2 * MINUTE : 3 * MINUTE,
 }));
 
 export function initialGarden(): GardenState {
-  return { coins: 0, pots: [null, null, null], harvested: Array(40).fill(0), totalHarvests: 0, lastObservedAt: 0 };
+  return { coins: 0, pots: [null, null, null], harvested: Array(40).fill(0), totalHarvests: 0, lastObservedAt: 0, unlockedSpecies: 1 };
+}
+
+/** Harvests of the preceding species needed to open this seed. */
+export function harvestsToUnlock(species: number): number {
+  return species <= 0 ? 0 : species === 1 ? 5 : species === 2 ? 12 : species === 3 ? 20 : species <= 8 ? 50 : species <= 20 ? 90 : 120;
 }
 
 export function expansionCost(state: GardenState): number {
@@ -59,7 +63,7 @@ export function isPlantReady(plant: GardenPlant, now: number): boolean {
 
 export function isSpeciesUnlocked(state: GardenState, species: number): boolean {
   return Number.isInteger(species) && species >= 0 && species < PLANTS.length
-    && (species === 0 || state.harvested[species - 1] >= 5);
+    && species < state.unlockedSpecies;
 }
 
 export function reduceGarden(state: GardenState, action: GardenAction, now: number): GardenState {
@@ -90,6 +94,8 @@ export function reduceGarden(state: GardenState, action: GardenAction, now: numb
     pots[action.index] = null;
     const harvested = [...state.harvested];
     harvested[plant.species] += 1;
+    let unlockedSpecies = state.unlockedSpecies;
+    while (unlockedSpecies < PLANTS.length && harvested[unlockedSpecies - 1] >= harvestsToUnlock(unlockedSpecies)) unlockedSpecies += 1;
     return {
       ...state,
       pots,
@@ -97,6 +103,7 @@ export function reduceGarden(state: GardenState, action: GardenAction, now: numb
       coins: Math.min(MAX_COUNT, state.coins + 15 + plant.species * 5),
       totalHarvests: state.totalHarvests + 1,
       lastObservedAt: observedAt,
+      unlockedSpecies,
     };
   }
   return state;
@@ -115,7 +122,9 @@ function integer(value: unknown, max: number): number {
 }
 
 export function parseGarden(value: unknown): GardenState {
-  const data = record(value, ['coins', 'pots', 'harvested', 'totalHarvests', 'lastObservedAt']);
+  const data = record(value, ['coins', 'pots', 'harvested', 'totalHarvests', 'lastObservedAt', 'unlockedSpecies']);
+  const unlockedSpecies = integer(data.unlockedSpecies, 40);
+  if (unlockedSpecies < 1) throw new Error('해금된 씨앗 수가 올바르지 않습니다.');
   const coins = integer(data.coins, MAX_COUNT);
   const totalHarvests = integer(data.totalHarvests, MAX_COUNT);
   const lastObservedAt = integer(data.lastObservedAt, MAX_TIMESTAMP);
@@ -131,5 +140,17 @@ export function parseGarden(value: unknown): GardenState {
   if (!Array.isArray(data.harvested) || data.harvested.length !== 40) throw new Error('수확 기록 길이가 올바르지 않습니다.');
   const harvested = Array.from(data.harvested, (count) => integer(count, MAX_COUNT));
   if (harvested.reduce((sum, count) => sum + count, 0) !== totalHarvests) throw new Error('수확 기록 합계가 올바르지 않습니다.');
-  return { coins, pots, harvested, totalHarvests, lastObservedAt };
+  return { coins, pots, harvested, totalHarvests, lastObservedAt, unlockedSpecies };
+}
+
+/** Preserve every seed available or already grown under the old five-harvest rule. */
+export function migrateGarden(value: unknown): GardenState {
+  const data = record(value, ['coins', 'pots', 'harvested', 'totalHarvests', 'lastObservedAt']);
+  const state = parseGarden({ ...data, unlockedSpecies: 1 });
+  for (let species = 1; species < PLANTS.length; species += 1) {
+    if (state.harvested[species - 1] >= 5 || state.harvested[species] > 0 || state.pots.some((plant) => plant !== null && plant.species >= species)) {
+      state.unlockedSpecies = species + 1;
+    }
+  }
+  return state;
 }

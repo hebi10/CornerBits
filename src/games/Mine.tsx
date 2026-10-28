@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { MINE_COUNT_LIMIT, MINE_DEPTH_LIMIT, MINERALS, mineDurability, oreAt, saleValue, upgradeCost, type MineAction, type MineState } from './mine';
+import { MINE_COUNT_LIMIT, MINE_DEPTH_LIMIT, MINERALS, mineDurability, oreAt, saleValue, upgradeCost, upgradeDepthRequired, type MineAction, type MineState } from './mine';
 import { Sprite } from './Art';
 import './mine.css';
 
@@ -20,7 +20,7 @@ export default function Mine({ state, onAction, disabled }: { state: MineState; 
   const durability = mineDurability(state.depth);
   const sale = saleValue(state.inventory);
   const cost = upgradeCost(state.pickaxe);
-  const gate = 100 * state.pickaxe;
+  const gate = upgradeDepthRequired(state.pickaxe);
   const maxPickaxe = state.pickaxe === 10;
   const full = state.totalMined >= MINE_COUNT_LIMIT;
   const saleOverflow = sale > MINE_COUNT_LIMIT - state.coins;
@@ -100,7 +100,8 @@ export default function Mine({ state, onAction, disabled }: { state: MineState; 
             <p>광물 도감 {found}/30 · 판매 가능 {fullNumber.format(sale)} 코인</p>
             <p>광석 그림을 눌러 채굴하고 모두 캐면 사다리로 다음 층에 내려가세요. 도구에 마우스를 올리면 이름과 필요한 조건을 볼 수 있습니다.</p>
             <p>목표는 1,000층과 광물 30종입니다. 목표 뒤에도 계속 내려갈 수 있습니다.</p>
-            <p>곡괭이는 100층마다 강화 조건이 열립니다. 코인도 필요하며 최고 10단계입니다.</p>
+            <p>곡괭이는 현재 단계 × 40층부터 강화할 수 있습니다. 비용은 단계 × 단계 × 500코인이며 최고 10단계입니다.</p>
+            <p>한 번에 10~15분, 약 15~20층을 가볍게 탐험해 보세요. 일일 제한은 없습니다.</p>
             <p>누적 채굴 {fullNumber.format(state.totalMined)}개 · 현재 층 {25 - remaining}/25칸 완료</p>
             <ol className="mine-collection" aria-label="광물 도감">
               {MINERALS.map((name, mineral) => <li key={name}>
