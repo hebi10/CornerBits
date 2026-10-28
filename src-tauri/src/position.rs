@@ -165,4 +165,53 @@ mod tests {
             Ok(Some(Point { x: 130, y: 240 }))
         );
     }
+
+    #[test]
+    fn position_observation_preserves_vertical_drag_across_taskbar_gap() {
+        // The user's primary display is below the second one. Each work area
+        // excludes a 48px taskbar, so no single work area contains these
+        // intermediate 280x380 window rectangles during the crossing.
+        let monitors = [
+            Bounds {
+                x: 0,
+                y: 0,
+                width: 2560,
+                height: 1032,
+            },
+            Bounds {
+                x: 0,
+                y: -1080,
+                width: 1920,
+                height: 1032,
+            },
+        ];
+        for y in [60, 1, 0, -1, -24, -48, -200, -428, -600] {
+            let point = Point { x: 200, y };
+            assert_eq!(
+                normal_window_position::<()>(false, || Ok(point)),
+                Ok(Some(point))
+            );
+        }
+        // Recovering on every move would push a crossing point back down.
+        assert_eq!(
+            clamp(Point { x: 200, y: -24 }, (280, 380), &monitors),
+            Point { x: 200, y: 0 }
+        );
+    }
+
+    #[test]
+    fn explicit_expansion_recovers_bottom_edge_after_compact_drag() {
+        let monitors = [Bounds {
+            x: 0,
+            y: 0,
+            width: 2560,
+            height: 1032,
+        }];
+        let compact_point = Point { x: 200, y: 996 };
+        assert_eq!(clamp(compact_point, (280, 36), &monitors), compact_point);
+        assert_eq!(
+            clamp(compact_point, (280, 380), &monitors),
+            Point { x: 200, y: 652 }
+        );
+    }
 }

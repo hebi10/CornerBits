@@ -1,5 +1,5 @@
 import { invoke, isTauri } from '@tauri-apps/api/core';
-import { getCurrentWindow, LogicalSize } from '@tauri-apps/api/window';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { encodeBackup, parseState, type AppState } from './core/state';
 
 export const desktop = isTauri();
@@ -63,10 +63,10 @@ export async function restoreState(state: AppState): Promise<void> {
 
 export async function applyWindow(settings: AppState['settings']): Promise<void> {
   if (!desktop) return;
-  const window = getCurrentWindow();
   // Legacy alwaysOnTop stays in backups, but desktop placement belongs to the
-  // native widget controller. Restoring an old backup must not raise the widget.
-  await window.setSize(new LogicalSize(280, settings.compact ? 36 : 380));
+  // native widget controller. Its explicit resize also recovers the expanded
+  // layout into view, without clamping intermediate drag/DPI move events.
+  await invoke('resize_widget', { compact: settings.compact });
 }
 
 export async function closeWindow(): Promise<void> {

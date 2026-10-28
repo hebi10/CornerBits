@@ -19,31 +19,37 @@ fn show_main(app: &tauri::AppHandle) {
     }
 }
 
-fn clamped_position(window: &WebviewWindow, point: Point) -> tauri::Result<Point> {
-    let size = window.outer_size()?;
+fn clamped_position(
+    window: &WebviewWindow,
+    point: Point,
+    logical_size: (u32, u32),
+) -> tauri::Result<Point> {
     let monitors = window
         .available_monitors()?
         .into_iter()
         .map(|monitor| {
             let work = monitor.work_area();
-            Bounds {
-                x: work.position.x,
-                y: work.position.y,
-                width: work.size.width,
-                height: work.size.height,
-            }
+            (
+                Bounds {
+                    x: work.position.x,
+                    y: work.position.y,
+                    width: work.size.width,
+                    height: work.size.height,
+                },
+                monitor.scale_factor(),
+            )
         })
         .collect::<Vec<_>>();
-    Ok(position::clamp(point, (size.width, size.height), &monitors))
+    Ok(position::clamp_logical(point, logical_size, &monitors))
 }
 
-fn clamp_current(window: &WebviewWindow) -> tauri::Result<Point> {
+fn clamp_current(window: &WebviewWindow, logical_size: (u32, u32)) -> tauri::Result<Point> {
     let current = window.outer_position()?;
     let point = Point {
         x: current.x,
         y: current.y,
     };
-    let clamped = clamped_position(window, point)?;
+    let clamped = clamped_position(window, point, logical_size)?;
     if point != clamped {
         window.set_position(PhysicalPosition::new(clamped.x, clamped.y))?;
     }
@@ -53,7 +59,16 @@ fn clamp_current(window: &WebviewWindow) -> tauri::Result<Point> {
 fn track_normal_position(window: &WebviewWindow) -> Result<(), String> {
     let observed = position::normal_window_position(
         window.is_minimized().map_err(|error| error.to_string())?,
-        || clamp_current(window).map_err(|error| error.to_string()),
+        || {
+            // Moves and DPI changes can temporarily straddle two monitors or
+            // their taskbar gaps. Observing must never reposition the window:
+            // clamping each intermediate point traps a drag at that boundary.
+            let current = window.outer_position().map_err(|error| error.to_string())?;
+            Ok::<_, String>(Point {
+                x: current.x,
+                y: current.y,
+            })
+        },
     )?;
     if let Some(point) = observed {
         *window
@@ -63,6 +78,21 @@ fn track_normal_position(window: &WebviewWindow) -> Result<(), String> {
             .map_err(|_| "창 위치 메모리 잠금 오류입니다.".to_owned())? = Some(point);
     }
     Ok(())
+}
+
+#[tauri::command]
+fn resize_widget(window: WebviewWindow, compact: bool) -> Result<(), String> {
+    // Recover into a work area only for an explicit layout change. In
+    // particular, expanding a 36px bar near the bottom must reveal all 380px.
+    // This command does not change settings or save game data.
+    let height = if compact { 36 } else { 380 };
+    window
+        .set_size(LogicalSize::new(280.0, f64::from(height)))
+        .map_err(|error| error.to_string())?;
+    // Use the requested logical size and destination DPI, not outer_size(),
+    // which can still describe the previous layout while sizing is queued.
+    clamp_current(&window, (280, height)).map_err(|error| error.to_string())?;
+    track_normal_position(&window)
 }
 
 fn persist_position(window: &WebviewWindow) -> Result<(), String> {
@@ -224,6 +254,7 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            resize_widget,
             commands::load_state,
             commands::save_state,
             commands::export_backup,

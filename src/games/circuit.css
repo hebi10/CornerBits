@@ -4,7 +4,7 @@
 .circuit-board.size-5 { grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(5, 1fr); }
 .circuit-tile { position: relative; display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 0; padding: 0; border: 0; background: transparent; touch-action: manipulation; }
 .circuit-tile:disabled { background: transparent; }
-.circuit-tile:focus-visible { z-index: 2; outline-offset: -2px; background: rgb(248 248 246 / 80%); }
+.circuit-tile:focus-visible { z-index: 2; outline-offset: -2px; }
 .circuit-wires { position: absolute; inset: 0; pointer-events: none; }
 .circuit-wire { position: absolute; background: #aaa; border: 1px solid #f8f8f6; }
 .powered .circuit-wire { background: #353535; }

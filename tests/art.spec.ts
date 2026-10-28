@@ -131,10 +131,21 @@ test('games expose the wallpaper while management and error messages stay readab
   for (const wallpaper of ['#202328', '#e5e5e5']) {
     await page.evaluate((color) => { document.documentElement.style.backgroundColor = color; }, wallpaper);
     await expect(page.getByRole('button', { name: '관리', exact: true })).toBeVisible();
-    await expect(page.locator('.save-state')).toHaveCSS('background-color', 'rgba(245, 245, 243, 0.88)');
+    await expect(page.locator('.save-state')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
   }
   await page.getByRole('button', { name: '관리', exact: true }).click();
   await expect(page.locator('.shell')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  for (const selector of ['.keepsake-caption', 'footer']) {
+    await expect(page.locator(selector)).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    await expect(page.locator(selector)).not.toHaveCSS('text-shadow', 'none');
+  }
+  const backup = page.getByRole('button', { name: '백업 내보내기' });
+  await backup.focus();
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Shift+Tab');
+  await expect(backup).toBeFocused();
+  await expect(backup).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  await expect(backup).toHaveCSS('outline-style', 'solid');
   await page.getByLabel('보관함 사용 안내', { exact: true }).click();
   await expect(page.locator('.widget-help')).toHaveCSS('background-color', 'rgba(245, 245, 243, 0.96)');
   await expect(page.getByRole('button', { name: '백업 내보내기' })).toBeEnabled();
