@@ -1,6 +1,6 @@
 # CornerBits interface
 
-Approved visual brief: small Windows utility, black/gray/white, data-oriented presentation.
+Approved visual brief: small Windows desktop widget, black/gray/white, quiet miniature mine and garden. The 2026-10-28 refinement replaces repetitive game text with decorative sprite art and subtle feedback.
 
 - Operate mode. Three small views (mine, garden, management), a draggable compact title bar, shared save status and backup actions.
 - Background #f5f5f3, surface #ffffff, text #252525, muted text #595959, border #bdbdb8.
@@ -11,3 +11,7 @@ Approved visual brief: small Windows utility, black/gray/white, data-oriented pr
 - Browser preview is explicitly labeled; desktop files never silently fall back to browser storage.
 - The user selected a desktop widget rather than an independent app window. Hide standard minimize/taskbar affordances, keep compact/close and tray recovery, and place behind other applications.
 - Desktop surface uses rgb(245 245 243 / 90%) over wallpaper and a title bar using rgb(232 232 227 / 70%). Text and game controls retain the existing readable grayscale colors. Browser preview shows the same interface; true desktop placement is native only.
+- Transparent PNG atlases in public/art contain 16 mine sprites and 16 garden sprites. Assets are rendered with grayscale(1), preserving their original alpha. Exact generation prompts are embedded in the PNGs and recorded in prompts.json.
+- Mine tiles show intact, cracked, or excavated rock. Four ore families represent 30 minerals consistently; full names and durability remain in accessible labels/tooltips.
+- Garden pots show soil, seed, sprout, leaves, then mature plant families. Twelve mature illustrations represent 40 species; do not imply every species has a unique illustration.
+- A slow lantern/plant sway and brief pickaxe/chips/water/harvest effects provide quiet movement. Effects follow successful game state changes. Hidden documents pause CSS animation and the garden clock; compact/game switching unmount content; reduced-motion removes animation.

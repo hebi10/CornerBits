@@ -1,0 +1,23 @@
+.game-art { display: inline-block; flex: none; width: 40px; height: 40px; background-size: 400% 400%; background-repeat: no-repeat; image-rendering: auto; filter: grayscale(1); vertical-align: middle; pointer-events: none; }
+.mine-art { background-image: url('/art/mine-atlas.png'); }
+.garden-art { background-image: url('/art/garden-atlas.png'); }
+.frame-0 { background-position: 0 0; }
+.frame-1 { background-position: 33.333333% 0; }
+.frame-2 { background-position: 66.666667% 0; }
+.frame-3 { background-position: 100% 0; }
+.frame-4 { background-position: 0 33.333333%; }
+.frame-5 { background-position: 33.333333% 33.333333%; }
+.frame-6 { background-position: 66.666667% 33.333333%; }
+.frame-7 { background-position: 100% 33.333333%; }
+.frame-8 { background-position: 0 66.666667%; }
+.frame-9 { background-position: 33.333333% 66.666667%; }
+.frame-10 { background-position: 66.666667% 66.666667%; }
+.frame-11 { background-position: 100% 66.666667%; }
+.frame-12 { background-position: 0 100%; }
+.frame-13 { background-position: 33.333333% 100%; }
+.frame-14 { background-position: 66.666667% 100%; }
+.frame-15 { background-position: 100% 100%; }
+.motion-paused *, .motion-paused *::before, .motion-paused *::after { animation-play-state: paused !important; }
+@media (prefers-reduced-motion: reduce) {
+  .game-art, .mine-game *, .garden * { animation: none !important; transition: none !important; }
+}

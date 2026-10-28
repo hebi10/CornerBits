@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import Garden from './Garden.tsx';
+import Garden, { confirmedGardenFeedback } from './Garden.tsx';
 import {
   expansionCost, gardenNow, initialGarden, isPlantReady, isSpeciesUnlocked,
   parseGarden, PLANTS, reduceGarden, type GardenState,
@@ -210,8 +210,44 @@ describe('garden pacing simulation', () => {
 });
 
 describe('garden controls', () => {
+  it('shows feedback only for a confirmed watering transition', () => {
+    const before = planted();
+    const action = { type: 'water' as const, index: 0 };
+    const accepted = reduceGarden(before, action, 2_000);
+    expect(confirmedGardenFeedback(before, accepted, action)).toEqual({ type: 'water', index: 0, reward: 0 });
+    const stale = reduceGarden(before, action, 61_000);
+    expect(confirmedGardenFeedback(before, stale, action)).toBeNull();
+    expect(confirmedGardenFeedback(before, { ...before }, action)).toBeNull();
+  });
+
+  it('shows the actual credited amount when a harvest reaches the coin limit', () => {
+    const before = { ...planted(), coins: LIMIT - 1 };
+    const action = { type: 'harvest' as const, index: 0 };
+    const after = reduceGarden(before, action, 61_000);
+    expect(confirmedGardenFeedback(before, after, action)).toEqual({ type: 'harvest', index: 0, reward: 1 });
+    expect(confirmedGardenFeedback(before, initialGarden(), action)).toBeNull();
+    expect(confirmedGardenFeedback(before, before, action)).toBeNull();
+    const html = renderToStaticMarkup(createElement(Garden, { state: before, disabled: false, onAction: () => undefined }));
+    expect(html).toMatch(/garden-pot-action">수확 \+1<\/span>/);
+  });
+
   it('counts harvested species separately from free seeds available for planting', () => {
     const html = renderToStaticMarkup(createElement(Garden, { state: initialGarden(), disabled: false, onAction: () => undefined }));
     expect(html.replace(/<[^>]*>/g, '')).toContain('도감 0/40');
+  });
+
+  it('shows seed, sprout, leafy and mature illustrations from elapsed growth', () => {
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(100_000);
+    try {
+      const state = initialGarden();
+      state.lastObservedAt = 100_000;
+      state.pots = [95_000, 80_000, 50_000, 40_000].map((plantedAt) => ({ species: 0, plantedAt, watered: false }));
+      const html = renderToStaticMarkup(createElement(Garden, { state, disabled: false, onAction: () => undefined }));
+      const frames = [...html.matchAll(/garden-art frame-(\d+) garden-pot-art/g)].map((match) => Number(match[1]));
+      expect(frames).toEqual([1, 2, 3, 8]);
+      expect(html).toContain('4번 화분 새싹 수확');
+    } finally {
+      clock.mockRestore();
+    }
   });
 });

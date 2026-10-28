@@ -218,6 +218,28 @@ describe('long-term mine progression', () => {
 });
 
 describe('mine controls', () => {
+  it('uses quartz artwork consistently for all quartz blocks', () => {
+    const html = renderToStaticMarkup(createElement(Mine, { state: initialMine(), disabled: false, onAction: () => {} }));
+    const cells = html.match(/<button\b[^>]*class="mine-tile[^\"]*"[^>]*>[\s\S]*?<\/button>/g) ?? [];
+    expect(cells.map((cell) => cell.match(/mine-art frame-(\d+)/)?.[1])).toEqual(Array(25).fill('0'));
+  });
+
+  it('shows diamond-bearing artwork for the guaranteed diamond block', () => {
+    const state = { ...emptyFloor(987), tiles: Array(25).fill(20) };
+    const html = renderToStaticMarkup(createElement(Mine, { state, disabled: false, onAction: () => {} }));
+    const cells = html.match(/<button\b[^>]*class="mine-tile[^\"]*"[^>]*>[\s\S]*?<\/button>/g) ?? [];
+    expect(cells[12]).toContain('다이아몬드');
+    expect(cells[12]).toContain('mine-art frame-3');
+  });
+
+  it('shows the board as artwork while keeping full mineral and HP information accessible', () => {
+    const html = renderToStaticMarkup(createElement(Mine, { state: initialMine(), disabled: false, onAction: () => {} }));
+    const cells = html.match(/<button\b[^>]*class="mine-tile[^\"]*"[^>]*>[\s\S]*?<\/button>/g) ?? [];
+    expect(cells).toHaveLength(25);
+    expect(cells.every((cell) => cell.replace(/<[^>]*>/g, '').trim() === '')).toBe(true);
+    expect(html).toContain('aria-label="1번 칸, 석영, 내구도 2/2"');
+  });
+
   it('labels each tile with its position, mineral and remaining HP', () => {
     const html = renderToStaticMarkup(createElement(Mine, { state: initialMine(), disabled: false, onAction: () => {} }));
     expect(html.match(/aria-label="\d+번 칸, 석영, 내구도 2\/2"/g)).toHaveLength(25);

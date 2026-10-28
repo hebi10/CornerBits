@@ -1,0 +1,15 @@
+{
+  "generator": "OpenAI built-in image_gen.imagegen",
+  "date": "2026-10-28",
+  "transparent_background": true,
+  "assets": [
+    {
+      "file": "mine-atlas.png",
+      "prompt": "Use case: stylized-concept. Asset type: production sprite atlas for CornerBits, a tiny monochrome desktop mining game. Create one square 1024 by 1024 PNG with genuinely transparent alpha background. Exactly FOUR equal columns and FOUR equal rows, sixteen separate sprites, centered in their invisible 256px square cells with generous clear transparent padding, no overlap between cells. A consistent charming hand-pixelled 2D game-art style with crisp stepped edges and restrained stippled texture; black, charcoal, gray and off-white ONLY, absolutely no colored pixels. Orthographic front/three-quarter view, consistent scale, readable at 36px. Row1 left-to-right: four different intact chunky rocky ore blocks, respectively embedded quartz crystals, coal, metal vein, gemstone. Row2: the same four blocks visibly cracked and partly chipped, matching the corresponding column. Row3: empty excavated dark rock socket; a little cluster of loose pebbles; a crossed wooden-handled pickaxe; a tiny mine cart filled with ore. Row4: a radiant geometric crystal cluster; a faceted diamond; a small pile of round coins; a hanging vintage mine lantern. These are isolated physical game sprites, not UI buttons. No text, numbers, letters, labels, frame borders, grid lines, checkerboard background, or scene background. Keep every sprite wholly inside its own cell with aligned centers; no decorative shadows outside sprite footprints."
+    },
+    {
+      "file": "garden-atlas.png",
+      "prompt": "Use case: stylized-concept. Asset type: production sprite atlas for CornerBits, a quiet decorative monochrome desktop gardening game. Create one square 1024 by 1024 PNG with genuinely transparent alpha background. Exactly FOUR equal columns and FOUR equal rows, sixteen separate sprites, centered in invisible 256px square cells. Every sprite is a tiny plant in the SAME simple square ceramic flowerpot, pot base aligned at 85 percent down each cell, whole object fits within the cell with generous transparent margins. A consistent charming hand-pixelled 2D botanical game-art style, crisp stepped edges with a little stippled detail, orthographic front view, readable at 55px. Palette strictly black, charcoal, gray and off-white ONLY, absolutely no colored pixels. Row1 left-to-right: empty pot of soil; pot of soil with one small planted seed mound; pot with a tiny two-leaf sprout; pot with a growing leafy seedling. Row2: mature clover; little dandelion; daisy flowers; pansy flowers. Row3: tuft of grasslike leaves; lavender spikes; bushy mint herb; tall sunflower. Row4: tulip; rose bush; fern; lily flowers. Pot shape, baseline and image scale must match throughout; plants differ in silhouettes and fullness. These are isolated sprites, no background scene. No text, labels, digits, UI, dividing lines, grid frames, checkerboard pattern, colored highlights, or shadows outside the sprite footprints. All sixteen plants fully separate and wholly within their own cell."
+    }
+  ]
+}

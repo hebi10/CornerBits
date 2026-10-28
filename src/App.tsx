@@ -29,11 +29,18 @@ export default function App() {
   const [pendingBackup, setPendingBackup] = useState<AppState | null>(null);
   const [legacyBackup, setLegacyBackup] = useState(false);
   const [screen, setScreen] = useState<'mine' | 'garden' | 'manage'>('mine');
+  const [visible, setVisible] = useState(() => !document.hidden);
   const [saveFailed, setSaveFailed] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const changing = useRef(false);
   const closing = useRef(false);
   const operations = useRef(new PendingOperations());
+
+  useEffect(() => {
+    const updateVisibility = () => setVisible(!document.hidden);
+    document.addEventListener('visibilitychange', updateVisibility);
+    return () => document.removeEventListener('visibilitychange', updateVisibility);
+  }, []);
 
   function runOperation(operation: () => Promise<void>) {
     if (closing.current || changing.current) return Promise.resolve();
@@ -207,7 +214,7 @@ export default function App() {
   const compact = state?.settings.compact ?? false;
   const gameDisabled = !ready || !state || busy || !!pendingBackup || saveFailed;
   return (
-    <div className={`shell${compact ? ' compact' : ''}`}>
+    <div className={`shell${compact ? ' compact' : ''}${!visible ? ' motion-paused' : ''}`}>
       <header className="titlebar">
         <span className="brand" data-tauri-drag-region>CornerBits</span>
         {compact && <span className="compact-status" role="status" aria-live="polite">{saveStatus}</span>}
@@ -232,7 +239,7 @@ export default function App() {
         {state && screen === 'garden' && <Garden state={state.games.garden} disabled={gameDisabled} onAction={(action) => void runOperation(() => play('garden', action))} />}
         {!state && screen !== 'manage' && <p className="description">{ready ? '기록을 확인할 수 없습니다. 관리 화면에서 백업을 복원해 주세요.' : '기록을 불러오고 있습니다.'}</p>}
         {screen === 'manage' && <>
-        <div className="page-heading"><h1>데이터 관리</h1><span className="version">v0.1.1</span></div>
+        <div className="page-heading"><h1>데이터 관리</h1><span className="version">v0.1.2</span></div>
         <section className="widget-info" aria-label="위젯 배치">
           <p className="section-label">바탕화면 위젯</p>
           <p className="description">다른 프로그램 뒤에 머뭅니다.<br />위쪽 제목을 끌어 위치를 옮기세요.<br />트레이에서 ‘위젯 찾기’를 누르면 다시 보입니다.</p>

@@ -24,7 +24,8 @@ Four independent games with persistent growth. Each game's major goals target ab
 
 ## Capabilities and Constraints
 
-- Small monochrome interface; no decorative animation, shadows, rounded cards, or unsolicited sound.
+- Small monochrome interface with generated mineral/plant sprites and quiet decorative motion, explicitly requested on 2026-10-28. No shadows, rounded cards, or unsolicited sound.
+- Growth and mining damage should be visible in the art; exact names and counts remain available in controls and collections. Honor reduced motion and pause hidden content.
 - Preserve saved data outside the installation directory.
 - Backup and restore must validate input and preserve the current state before replacement.
 - No server, accounts, push, or publication in the current phase.
