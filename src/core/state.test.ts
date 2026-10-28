@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { decodeBackup, encodeBackup, initialState, parseState, SaveQueue, type AppState } from './state';
 
 const savedState: AppState = {
-  schemaVersion: 1,
+  ...initialState(),
+  schemaVersion: 2,
   revision: 12,
   updatedAt: '2026-10-28T02:30:00.000Z',
   settings: { alwaysOnTop: true, compact: false },
@@ -25,12 +27,46 @@ function revision(value: number): AppState {
   return { ...savedState, revision: value, settings: { ...savedState.settings } };
 }
 
+describe('phase two compatibility', () => {
+  it('roundtrips the same populated game fixture used by the native store', () => {
+    const text = readFileSync(new URL('../../tests/fixtures/phase-two.cornerbits', import.meta.url), 'utf8');
+    const state = decodeBackup(text);
+    expect(state).toEqual(JSON.parse(text).state);
+    expect(decodeBackup(encodeBackup(state))).toEqual(state);
+  });
+  it('migrates legacy settings and backups to independent empty games', () => {
+    const legacy = { schemaVersion: 1, revision: 7, updatedAt: '2026-10-28T01:00:00Z', settings: { alwaysOnTop: true, compact: false } };
+    const migrated = parseState(JSON.stringify(legacy));
+    expect(migrated).toMatchObject({ schemaVersion: 2, revision: 7, settings: legacy.settings, games: { mine: { depth: 1, totalMined: 0 }, garden: { pots: [null, null, null], totalHarvests: 0 } } });
+    expect(decodeBackup(JSON.stringify({ ...backup, state: legacy }))).toEqual(migrated);
+  });
+
+  it('creates version two game progress for a new installation', () => {
+    expect(initialState()).toMatchObject({ schemaVersion: 2, games: { mine: { tiles: Array(25).fill(2) }, garden: { harvested: Array(40).fill(0) } } });
+  });
+
+  it('captures nested game arrays and planted pots before queued writes', async () => {
+    const source = initialState();
+    source.games.garden.pots[0] = { species: 0, plantedAt: 1, watered: false };
+    source.games.garden.lastObservedAt = 1;
+    const writes: unknown[] = [];
+    const queue = new SaveQueue(async (value) => { writes.push(value); });
+    const saving = queue.enqueue(source);
+    source.games.mine.tiles[0] = 0;
+    source.games.mine.inventory[0] = 9;
+    source.games.garden.pots[0].watered = true;
+    await saving;
+    expect(writes[0]).toMatchObject({ games: { mine: { tiles: Array(25).fill(2), inventory: Array(30).fill(0) }, garden: { pots: [{ species: 0, plantedAt: 1, watered: false }, null, null] } } });
+  });
+});
+
 describe('initialState', () => {
   it('starts with a current timestamp, zero revision, and independent disabled settings', () => {
     const before = Date.now();
     const state = initialState();
     expect(state).toEqual({
-      schemaVersion: 1,
+      schemaVersion: 2,
+      games: initialState().games,
       revision: 0,
       updatedAt: expect.any(String),
       settings: { alwaysOnTop: false, compact: false },
@@ -48,7 +84,7 @@ describe('state validation', () => {
   });
 
   it.each([
-    { label: 'future schema', value: { ...savedState, schemaVersion: 2 } },
+    { label: 'future schema', value: { ...savedState, schemaVersion: 3 } },
     { label: 'string schema', value: { ...savedState, schemaVersion: '1' } },
     { label: 'negative revision', value: { ...savedState, revision: -1 } },
     { label: 'fractional revision', value: { ...savedState, revision: 1.5 } },
@@ -117,7 +153,7 @@ describe('backup format', () => {
   it.each([
     { label: 'another app', value: { ...backup, format: 'OtherApp' } },
     { label: 'future backup version', value: { ...backup, backupVersion: 2 } },
-    { label: 'future state schema', value: { ...backup, state: { ...savedState, schemaVersion: 2 } } },
+    { label: 'future state schema', value: { ...backup, state: { ...savedState, schemaVersion: 3 } } },
     { label: 'invalid export timestamp', value: { ...backup, exportedAt: '2026-02-30T00:00:00Z' } },
     { label: 'missing app identifier', value: { backupVersion: 1, exportedAt: backup.exportedAt, state: savedState } },
     { label: 'unknown backup field', value: { ...backup, extra: true } },

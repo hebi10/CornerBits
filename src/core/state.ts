@@ -1,8 +1,12 @@
+import { initialMine, parseMine, type MineState } from '../games/mine';
+import { initialGarden, parseGarden, type GardenState } from '../games/garden';
+
 export interface AppState {
-  schemaVersion: 1;
+  schemaVersion: 2;
   revision: number;
   updatedAt: string;
   settings: { alwaysOnTop: boolean; compact: boolean };
+  games: { mine: MineState; garden: GardenState };
 }
 
 const MAX_FILE_BYTES = 2 * 1024 * 1024;
@@ -43,11 +47,16 @@ function readJson(text: string): unknown {
 }
 
 function validateState(value: unknown): AppState {
-  if (!isRecord(value) || !hasExactKeys(value, ['schemaVersion', 'revision', 'updatedAt', 'settings'])) {
-    throw new Error('설정 파일 형식이 올바르지 않습니다.');
+  if (!isRecord(value)) {
+    throw new Error('저장 파일 형식이 올바르지 않습니다.');
   }
-  if (value.schemaVersion !== 1) {
-    throw new Error('지원하지 않는 설정 버전입니다. CornerBits 버전을 확인해 주세요.');
+  if (value.schemaVersion !== 1 && value.schemaVersion !== 2) {
+    throw new Error('지원하지 않는 저장 버전입니다. CornerBits 버전을 확인해 주세요.');
+  }
+  const keys = ['schemaVersion', 'revision', 'updatedAt', 'settings'];
+  if (value.schemaVersion === 2) keys.push('games');
+  if (!hasExactKeys(value, keys)) {
+    throw new Error('저장 파일 형식이 올바르지 않습니다.');
   }
   if (typeof value.revision !== 'number' || !Number.isSafeInteger(value.revision) || value.revision < 0) {
     throw new Error('설정 파일의 저장 번호가 올바르지 않습니다.');
@@ -60,20 +69,31 @@ function validateState(value: unknown): AppState {
     || typeof settings.alwaysOnTop !== 'boolean' || typeof settings.compact !== 'boolean') {
     throw new Error('설정 값이 올바르지 않습니다. 백업 파일을 확인해 주세요.');
   }
+  let games: AppState['games'];
+  if (value.schemaVersion === 1) {
+    games = { mine: initialMine(), garden: initialGarden() };
+  } else {
+    if (!isRecord(value.games) || !hasExactKeys(value.games, ['mine', 'garden'])) {
+      throw new Error('게임 기록 형식이 올바르지 않습니다.');
+    }
+    games = { mine: parseMine(value.games.mine), garden: parseGarden(value.games.garden) };
+  }
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     revision: value.revision,
     updatedAt: value.updatedAt,
     settings: { alwaysOnTop: settings.alwaysOnTop, compact: settings.compact },
+    games,
   };
 }
 
 export function initialState(): AppState {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     revision: 0,
     updatedAt: new Date().toISOString(),
     settings: { alwaysOnTop: false, compact: false },
+    games: { mine: initialMine(), garden: initialGarden() },
   };
 }
 
@@ -111,7 +131,7 @@ export class SaveQueue {
   constructor(private write: (state: AppState) => Promise<void>) {}
 
   enqueue(state: AppState): Promise<void> {
-    const snapshot = { ...state, settings: { ...state.settings } };
+    const snapshot = structuredClone(state);
     const saving = this.tail.then(async () => {
       try {
         await this.write(snapshot);

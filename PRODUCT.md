@@ -18,14 +18,14 @@ People who want small, quiet, offline games at the edge of a Windows desktop.
 
 ## Product Purpose
 
-Four independent games with persistent growth. Each game's major goals target about 60 days at 10–15 minutes per day. Phase one implements only the desktop shell, automatic saving, and backup export/restore.
+Four independent games with persistent growth. Each game's major goals target about 60 days at 10–15 minutes per day. Phase two adds a 5×5 mine and an offline growing garden to the desktop shell, automatic saving, and backup export/restore. The remaining two games are future work.
 
 ## Capabilities and Constraints
 
 - Small monochrome interface; no decorative animation, shadows, rounded cards, or unsolicited sound.
 - Preserve saved data outside the installation directory.
 - Backup and restore must validate input and preserve the current state before replacement.
-- No server, accounts, push, or publication in phase one.
+- No server, accounts, push, or publication in the current phase.
 
 ## Product Principles
 

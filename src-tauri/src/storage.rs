@@ -1,3 +1,4 @@
+use crate::game_state::{deserialize_integer, Games};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::fs::{self, File, OpenOptions};
@@ -17,35 +18,128 @@ pub struct Settings {
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct AppState {
-    pub schema_version: u8,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub schema_version: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
     pub revision: u64,
     pub updated_at: String,
     pub settings: Settings,
+    pub games: Games,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Backup {
     pub format: String,
-    pub backup_version: u8,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub backup_version: u64,
     pub exported_at: String,
     pub state: AppState,
 }
 
 impl AppState {
     pub fn validate(&self) -> Result<(), String> {
-        if self.schema_version != 1 {
+        if self.schema_version != 2 {
             return Err("지원하지 않는 데이터 버전입니다.".into());
         }
         if self.revision > 9_007_199_254_740_991 {
             return Err("데이터 변경 번호가 올바르지 않습니다.".into());
         }
         validate_timestamp(&self.updated_at)?;
-        Ok(())
+        self.games.validate()
     }
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct LegacyState {
+    #[serde(deserialize_with = "deserialize_integer")]
+    schema_version: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    revision: u64,
+    updated_at: String,
+    settings: Settings,
+}
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum StoredState {
+    Current(AppState),
+    Legacy(LegacyState),
+}
+
+impl StoredState {
+    fn normalize(self) -> Result<(AppState, bool), String> {
+        let (state, migrated) = match self {
+            Self::Current(state) => (state, false),
+            Self::Legacy(legacy) => {
+                if legacy.schema_version != 1 {
+                    return Err("지원하지 않는 데이터 버전입니다.".into());
+                }
+                (
+                    AppState {
+                        schema_version: 2,
+                        revision: legacy.revision,
+                        updated_at: legacy.updated_at,
+                        settings: legacy.settings,
+                        games: Games::default(),
+                    },
+                    true,
+                )
+            }
+        };
+        state.validate()?;
+        Ok((state, migrated))
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct StoredBackup {
+    format: String,
+    #[serde(deserialize_with = "deserialize_integer")]
+    backup_version: u64,
+    exported_at: String,
+    state: StoredState,
+}
+
 fn validate_timestamp(value: &str) -> Result<(), String> {
+    let bytes = value.as_bytes();
+    let valid_prefix = bytes.len() >= 20
+        && bytes[..19]
+            .iter()
+            .enumerate()
+            .all(|(index, byte)| match index {
+                4 | 7 => *byte == b'-',
+                10 => *byte == b'T',
+                13 | 16 => *byte == b':',
+                _ => byte.is_ascii_digit(),
+            })
+        && bytes[17] < b'6';
+    if !valid_prefix {
+        return Err("날짜 형식이 올바르지 않습니다.".into());
+    }
+    let mut zone = &bytes[19..];
+    if zone.first() == Some(&b'.') {
+        let digits = zone[1..]
+            .iter()
+            .take_while(|byte| byte.is_ascii_digit())
+            .count();
+        if !(1..=9).contains(&digits) {
+            return Err("날짜 형식이 올바르지 않습니다.".into());
+        }
+        zone = &zone[digits + 1..];
+    }
+    let valid_zone = zone == b"Z"
+        || (zone.len() == 6
+            && matches!(zone[0], b'+' | b'-')
+            && zone[3] == b':'
+            && [1, 2, 4, 5]
+                .iter()
+                .all(|index| zone[*index].is_ascii_digit()));
+    if !valid_zone {
+        return Err("날짜 형식이 올바르지 않습니다.".into());
+    }
     DateTime::parse_from_rfc3339(value)
         .map(|_| ())
         .map_err(|_| "날짜 형식이 올바르지 않습니다.".into())
@@ -53,14 +147,19 @@ fn validate_timestamp(value: &str) -> Result<(), String> {
 
 pub fn parse_backup(bytes: &[u8]) -> Result<Backup, String> {
     validate_size(bytes)?;
-    let backup: Backup = serde_json::from_slice(bytes)
+    let backup: StoredBackup = serde_json::from_slice(bytes)
         .map_err(|_| "CornerBits 백업 형식이 올바르지 않습니다.".to_owned())?;
     if backup.format != "CornerBits" || backup.backup_version != 1 {
         return Err("지원하지 않는 백업 형식 또는 버전입니다.".into());
     }
     validate_timestamp(&backup.exported_at)?;
-    backup.state.validate()?;
-    Ok(backup)
+    let (state, _) = backup.state.normalize()?;
+    Ok(Backup {
+        format: backup.format,
+        backup_version: backup.backup_version,
+        exported_at: backup.exported_at,
+        state,
+    })
 }
 
 fn validate_size(bytes: &[u8]) -> Result<(), String> {
@@ -189,9 +288,21 @@ impl Store {
             Ok(_) => {}
         }
         let bytes = read_limited(&path)?;
-        let state: AppState = serde_json::from_slice(&bytes)
+        let stored: StoredState = serde_json::from_slice(&bytes)
             .map_err(|_| "저장 데이터가 손상되었거나 형식이 올바르지 않습니다.".to_owned())?;
-        state.validate()?;
+        let (state, migrated) = stored.normalize()?;
+        if migrated {
+            let snapshot = self.root.join("snapshots").join(format!(
+                "pre-migration-{}-{}-{}.json",
+                Utc::now().format("%Y%m%dT%H%M%S%.9fZ"),
+                std::process::id(),
+                FILE_SEQUENCE.fetch_add(1, Ordering::Relaxed)
+            ));
+            // Preserve the original v1 formatting and bytes before replacing it.
+            // Any snapshot error returns without touching state.json.
+            atomic_write(&snapshot, &bytes)?;
+            atomic_write(&path, &state_bytes(&state)?)?;
+        }
         Ok(Some(state))
     }
 
@@ -309,13 +420,14 @@ mod tests {
 
     fn state(revision: u64) -> AppState {
         AppState {
-            schema_version: 1,
+            schema_version: 2,
             revision,
             updated_at: "2026-10-28T01:00:00.000Z".into(),
             settings: Settings {
                 always_on_top: false,
                 compact: false,
             },
+            games: Games::default(),
         }
     }
 
@@ -325,12 +437,462 @@ mod tests {
             .into()
     }
 
+    fn legacy_bytes() -> &'static [u8] {
+        b"{\r\n  \"schemaVersion\":1, \"revision\":7,\"updatedAt\":\"2026-10-28T01:00:00.000Z\",\"settings\":{\"alwaysOnTop\":true,\"compact\":true}\r\n}\r\n"
+    }
+
+    fn populated_v2() -> serde_json::Value {
+        let mut inventory = vec![0; 30];
+        inventory[0] = 2;
+        inventory[29] = 1;
+        let mut collected = vec![0; 30];
+        collected[0] = 10;
+        collected[29] = 3;
+        let mut harvested = vec![0; 40];
+        harvested[0] = 5;
+        harvested[39] = 2;
+        serde_json::json!({
+            "schemaVersion": 2, "revision": 42,
+            "updatedAt": "2026-10-28T01:00:00.000Z",
+            "settings": {"alwaysOnTop": true, "compact": false},
+            "games": {
+                "mine": {"depth": 101, "pickaxe": 3, "coins": 234,
+                    "inventory": inventory, "collected": collected,
+                    "tiles": [0,1,2,3,4,0,1,2,3,4,0,1,2,3,4,0,1,2,3,4,0,1,2,3,4],
+                    "totalMined": 13},
+                "garden": {"coins": 123,
+                    "pots": [null, {"species": 39, "plantedAt": 1000, "watered": true},
+                        {"species": 0, "plantedAt": 2000, "watered": false}],
+                    "harvested": harvested, "totalHarvests": 7, "lastObservedAt": 2000}
+            }
+        })
+    }
+
+    fn backup_value(state: serde_json::Value) -> serde_json::Value {
+        serde_json::json!({"format":"CornerBits", "backupVersion":1,
+            "exportedAt":"2026-10-28T12:00:00Z", "state":state})
+    }
+
+    #[test]
+    fn v2_roundtrips_both_populated_games_through_save_export_and_restore() {
+        let directory = tempdir().unwrap();
+        let export_directory = tempdir().unwrap();
+        let store = Store::new(directory.path().to_owned());
+        let expected = populated_v2();
+        let populated: AppState = serde_json::from_value(expected.clone()).unwrap();
+        populated.validate().unwrap();
+        store.save_at(&populated, now(28)).unwrap();
+        assert_eq!(
+            serde_json::to_value(store.load().unwrap().unwrap()).unwrap(),
+            expected
+        );
+        let export = export_directory.path().join("v2.cornerbits");
+        store.export_to(&export, now(28)).unwrap();
+        let restored = parse_backup(read_backup_file(&export).unwrap().as_bytes())
+            .unwrap()
+            .state;
+        store.restore_at(&restored, now(29)).unwrap();
+        assert_eq!(
+            serde_json::to_value(store.load().unwrap().unwrap()).unwrap(),
+            expected
+        );
+    }
+
+    #[test]
+    fn shared_frontend_fixture_restores_and_exports_without_losing_progress() {
+        let fixture = include_bytes!("../../tests/fixtures/phase-two.cornerbits");
+        let expected: serde_json::Value = serde_json::from_slice(fixture).unwrap();
+        let backup = parse_backup(fixture).unwrap();
+        assert_eq!(backup.state.schema_version, 2);
+        assert_eq!(backup.state.revision, 17);
+        assert_eq!(backup.state.games.mine.total_mined, 1);
+        assert_eq!(backup.state.games.mine.inventory[0], 1);
+        assert_eq!(&backup.state.games.mine.tiles[..3], &[0, 1, 2]);
+        assert_eq!(backup.state.games.garden.coins, 15);
+        assert_eq!(backup.state.games.garden.total_harvests, 1);
+        assert_eq!(backup.state.games.garden.last_observed_at, 2000);
+        let plant = backup.state.games.garden.pots[0].as_ref().unwrap();
+        assert_eq!(plant.species, 0);
+        assert_eq!(plant.planted_at, 1000);
+        assert!(plant.watered);
+        let directory = tempdir().unwrap();
+        let export_directory = tempdir().unwrap();
+        let store = Store::new(directory.path().to_owned());
+        store.restore_at(&backup.state, now(28)).unwrap();
+        assert_eq!(
+            serde_json::to_value(store.load().unwrap().unwrap()).unwrap(),
+            expected["state"]
+        );
+        let export = export_directory.path().join("shared-fixture.cornerbits");
+        store.export_to(&export, now(28)).unwrap();
+        let exported = parse_backup(read_backup_file(&export).unwrap().as_bytes()).unwrap();
+        assert_eq!(exported.backup_version, 1);
+        assert_eq!(
+            serde_json::to_value(exported.state).unwrap(),
+            expected["state"]
+        );
+    }
+
+    #[test]
+    fn legacy_load_migrates_once_after_preserving_exact_original_bytes() {
+        let directory = tempdir().unwrap();
+        let store = Store::new(directory.path().to_owned());
+        let path = directory.path().join("state.json");
+        fs::write(&path, legacy_bytes()).unwrap();
+        let migrated = store.load().unwrap().unwrap();
+        assert_eq!(migrated.schema_version, 2);
+        assert_eq!(migrated.revision, 7);
+        assert_eq!(migrated.updated_at, "2026-10-28T01:00:00.000Z");
+        assert!(migrated.settings.always_on_top && migrated.settings.compact);
+        let value = serde_json::to_value(&migrated).unwrap();
+        assert_eq!(
+            value["games"]["mine"]["tiles"],
+            serde_json::json!(vec![2; 25])
+        );
+        assert_eq!(value["games"]["mine"]["totalMined"], 0);
+        assert_eq!(
+            value["games"]["garden"]["pots"],
+            serde_json::json!([null, null, null])
+        );
+        assert_eq!(value["games"]["garden"]["lastObservedAt"], 0);
+        let snapshots: Vec<_> = fs::read_dir(directory.path().join("snapshots"))
+            .unwrap()
+            .map(|entry| entry.unwrap().path())
+            .collect();
+        assert_eq!(snapshots.len(), 1);
+        assert!(snapshots[0]
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .starts_with("pre-migration-"));
+        assert_eq!(fs::read(&snapshots[0]).unwrap(), legacy_bytes());
+        assert_eq!(
+            serde_json::from_slice::<AppState>(&fs::read(path).unwrap()).unwrap(),
+            migrated
+        );
+        assert_eq!(store.load().unwrap().unwrap(), migrated);
+        assert_eq!(
+            fs::read_dir(directory.path().join("snapshots"))
+                .unwrap()
+                .count(),
+            1
+        );
+    }
+
+    #[test]
+    fn legacy_migration_snapshot_failure_preserves_original() {
+        let directory = tempdir().unwrap();
+        let store = Store::new(directory.path().to_owned());
+        let path = directory.path().join("state.json");
+        fs::write(&path, legacy_bytes()).unwrap();
+        fs::write(directory.path().join("snapshots"), b"blocked").unwrap();
+        assert!(store.load().is_err());
+        assert_eq!(fs::read(path).unwrap(), legacy_bytes());
+    }
+
+    #[test]
+    fn legacy_backup_reads_original_text_but_restores_and_exports_v2() {
+        let directory = tempdir().unwrap();
+        let export_directory = tempdir().unwrap();
+        let store = Store::new(directory.path().to_owned());
+        let legacy: serde_json::Value = serde_json::from_slice(legacy_bytes()).unwrap();
+        let original = serde_json::to_string_pretty(&backup_value(legacy)).unwrap();
+        let input = export_directory.path().join("legacy.cornerbits");
+        fs::write(&input, &original).unwrap();
+        assert_eq!(read_backup_file(&input).unwrap(), original);
+        let normalized = parse_backup(original.as_bytes()).unwrap();
+        assert_eq!(normalized.state.schema_version, 2);
+        store.restore_at(&normalized.state, now(28)).unwrap();
+        let output = export_directory.path().join("normalized.cornerbits");
+        store.export_to(&output, now(28)).unwrap();
+        let exported: serde_json::Value =
+            serde_json::from_slice(&fs::read(output).unwrap()).unwrap();
+        assert_eq!(exported["backupVersion"], 1);
+        assert_eq!(exported["state"]["schemaVersion"], 2);
+        assert_eq!(exported["state"]["games"]["mine"]["depth"], 1);
+    }
+
+    #[test]
+    fn legacy_disk_export_normalizes_and_preserves_original() {
+        let directory = tempdir().unwrap();
+        let export_directory = tempdir().unwrap();
+        let store = Store::new(directory.path().to_owned());
+        fs::write(directory.path().join("state.json"), legacy_bytes()).unwrap();
+        let export = export_directory.path().join("legacy-export.cornerbits");
+        store.export_to(&export, now(28)).unwrap();
+        assert_eq!(
+            parse_backup(&fs::read(export).unwrap())
+                .unwrap()
+                .state
+                .schema_version,
+            2
+        );
+        let snapshot = fs::read_dir(directory.path().join("snapshots"))
+            .unwrap()
+            .next()
+            .unwrap()
+            .unwrap()
+            .path();
+        assert_eq!(fs::read(snapshot).unwrap(), legacy_bytes());
+    }
+
+    #[test]
+    fn v2_rejects_invalid_game_fields_and_preserves_existing_state() {
+        let directory = tempdir().unwrap();
+        let store = Store::new(directory.path().to_owned());
+        let good = populated_v2();
+        let validated: AppState = serde_json::from_value(good.clone()).unwrap();
+        validated.validate().unwrap();
+        store.save_at(&validated, now(28)).unwrap();
+        let before = fs::read(directory.path().join("state.json")).unwrap();
+        let cases = [
+            ("/schemaVersion", serde_json::json!(3)),
+            ("/revision", serde_json::json!(9007199254740992_u64)),
+            ("/games/mine/depth", serde_json::json!(0)),
+            ("/games/mine/depth", serde_json::json!(1000001)),
+            ("/games/mine/depth", serde_json::json!(1.5)),
+            ("/games/mine/pickaxe", serde_json::json!(0)),
+            ("/games/mine/pickaxe", serde_json::json!(11)),
+            ("/games/mine/coins", serde_json::json!(-1)),
+            ("/games/mine/coins", serde_json::json!(1000000000001_u64)),
+            ("/games/mine/inventory", serde_json::json!(vec![0; 29])),
+            ("/games/mine/inventory/0", serde_json::json!(11)),
+            ("/games/mine/collected", serde_json::json!(vec![0; 31])),
+            (
+                "/games/mine/collected/0",
+                serde_json::json!(1000000000001_u64),
+            ),
+            ("/games/mine/tiles", serde_json::json!(vec![0; 24])),
+            ("/games/mine/tiles/0", serde_json::json!(5)),
+            ("/games/mine/tiles/0", serde_json::json!(-1)),
+            ("/games/mine/totalMined", serde_json::json!(14)),
+            ("/games/garden/coins", serde_json::json!(1000000000001_u64)),
+            ("/games/garden/pots", serde_json::json!([null, null])),
+            (
+                "/games/garden/pots",
+                serde_json::json!(vec![serde_json::Value::Null; 13]),
+            ),
+            ("/games/garden/pots/1/species", serde_json::json!(40)),
+            ("/games/garden/pots/1/plantedAt", serde_json::json!(2001)),
+            ("/games/garden/pots/1/plantedAt", serde_json::json!(-1)),
+            ("/games/garden/pots/1/watered", serde_json::json!(1)),
+            ("/games/garden/harvested", serde_json::json!(vec![0; 39])),
+            (
+                "/games/garden/harvested/0",
+                serde_json::json!(1000000000001_u64),
+            ),
+            ("/games/garden/totalHarvests", serde_json::json!(8)),
+            (
+                "/games/garden/lastObservedAt",
+                serde_json::json!(8640000000000001_u64),
+            ),
+        ];
+        for (pointer, invalid) in cases {
+            let mut value = good.clone();
+            *value.pointer_mut(pointer).unwrap() = invalid;
+            let bytes = serde_json::to_vec(&backup_value(value.clone())).unwrap();
+            assert!(parse_backup(&bytes).is_err(), "accepted {pointer}: {value}");
+            if let Ok(state) = serde_json::from_value::<AppState>(value) {
+                assert!(store.save_at(&state, now(28)).is_err(), "saved {pointer}");
+                assert!(
+                    store.restore_at(&state, now(28)).is_err(),
+                    "restored {pointer}"
+                );
+            }
+        }
+        assert_eq!(
+            fs::read(directory.path().join("state.json")).unwrap(),
+            before
+        );
+        assert!(!directory.path().join("snapshots").exists());
+    }
+
+    #[test]
+    fn v2_requires_exact_keys_at_every_level() {
+        let good = populated_v2();
+        for pointer in [
+            "",
+            "/settings",
+            "/games",
+            "/games/mine",
+            "/games/garden",
+            "/games/garden/pots/1",
+        ] {
+            let fields: Vec<String> = good
+                .pointer(pointer)
+                .unwrap()
+                .as_object()
+                .unwrap()
+                .keys()
+                .cloned()
+                .collect();
+            for missing in fields {
+                let mut value = good.clone();
+                value
+                    .pointer_mut(pointer)
+                    .unwrap()
+                    .as_object_mut()
+                    .unwrap()
+                    .remove(&missing);
+                assert!(
+                    parse_backup(&serde_json::to_vec(&backup_value(value)).unwrap()).is_err(),
+                    "accepted missing {pointer}/{missing}"
+                );
+            }
+            let mut value = good.clone();
+            value
+                .pointer_mut(pointer)
+                .unwrap()
+                .as_object_mut()
+                .unwrap()
+                .insert("unexpected".into(), serde_json::json!(true));
+            assert!(
+                parse_backup(&serde_json::to_vec(&backup_value(value)).unwrap()).is_err(),
+                "accepted extra key in {pointer}"
+            );
+        }
+    }
+
+    #[test]
+    fn state_and_backup_timestamps_follow_the_frontend_iso_contract() {
+        for invalid in [
+            "2026-10-28t01:00:00Z",
+            "2026-10-28T01:00:00z",
+            "2026-10-28 01:00:00Z",
+            "2026-10-28T01:00:60Z",
+            "2026-10-28T01:00:00.1234567890Z",
+            "2026-10-28T01:00:00.Z",
+            "2026-10-28T01:00:00+24:00",
+        ] {
+            let mut state = populated_v2();
+            state["updatedAt"] = serde_json::json!(invalid);
+            assert!(
+                parse_backup(&serde_json::to_vec(&backup_value(state)).unwrap()).is_err(),
+                "accepted state timestamp {invalid}"
+            );
+            let mut backup = backup_value(populated_v2());
+            backup["exportedAt"] = serde_json::json!(invalid);
+            assert!(
+                parse_backup(&serde_json::to_vec(&backup).unwrap()).is_err(),
+                "accepted backup timestamp {invalid}"
+            );
+        }
+        for valid in [
+            "2026-10-28T01:00:00Z",
+            "2026-10-28T01:00:00.123456789+09:00",
+        ] {
+            let mut state = populated_v2();
+            state["updatedAt"] = serde_json::json!(valid);
+            assert!(parse_backup(&serde_json::to_vec(&backup_value(state)).unwrap()).is_ok());
+        }
+    }
+
+    #[test]
+    fn only_exact_legacy_state_is_migrated_and_ipc_requires_v2() {
+        let legacy: serde_json::Value = serde_json::from_slice(legacy_bytes()).unwrap();
+        assert!(serde_json::from_value::<AppState>(legacy.clone()).is_err());
+        for pointer in ["", "/settings"] {
+            let fields: Vec<String> = legacy
+                .pointer(pointer)
+                .unwrap()
+                .as_object()
+                .unwrap()
+                .keys()
+                .cloned()
+                .collect();
+            for missing in fields {
+                let mut value = legacy.clone();
+                value
+                    .pointer_mut(pointer)
+                    .unwrap()
+                    .as_object_mut()
+                    .unwrap()
+                    .remove(&missing);
+                assert!(parse_backup(&serde_json::to_vec(&backup_value(value)).unwrap()).is_err());
+            }
+            let mut value = legacy.clone();
+            value
+                .pointer_mut(pointer)
+                .unwrap()
+                .as_object_mut()
+                .unwrap()
+                .insert("unexpected".into(), serde_json::json!(true));
+            assert!(parse_backup(&serde_json::to_vec(&backup_value(value)).unwrap()).is_err());
+        }
+        let mut disguised = populated_v2();
+        disguised["schemaVersion"] = serde_json::json!(1);
+        let state: AppState = serde_json::from_value(disguised.clone()).unwrap();
+        assert!(state.validate().is_err());
+        assert!(parse_backup(&serde_json::to_vec(&backup_value(disguised)).unwrap()).is_err());
+    }
+
+    #[test]
+    fn v2_accepts_documented_numeric_and_collection_boundaries() {
+        let mut value = populated_v2();
+        value["revision"] = serde_json::json!(9007199254740991_u64);
+        value["games"]["mine"]["depth"] = serde_json::json!(1000000);
+        value["games"]["mine"]["pickaxe"] = serde_json::json!(10);
+        value["games"]["mine"]["coins"] = serde_json::json!(1000000000000_u64);
+        value["games"]["mine"]["tiles"] = serde_json::json!(vec![20; 25]);
+        value["games"]["mine"]["inventory"] = serde_json::json!(vec![0; 30]);
+        value["games"]["mine"]["collected"] = serde_json::json!(vec![0; 30]);
+        value["games"]["mine"]["collected"][29] = serde_json::json!(1000000000000_u64);
+        value["games"]["mine"]["totalMined"] = serde_json::json!(1000000000000_u64);
+        value["games"]["garden"]["coins"] = serde_json::json!(1000000000000_u64);
+        value["games"]["garden"]["harvested"] = serde_json::json!(vec![0; 40]);
+        value["games"]["garden"]["harvested"][39] = serde_json::json!(1000000000000_u64);
+        value["games"]["garden"]["totalHarvests"] = serde_json::json!(1000000000000_u64);
+        value["games"]["garden"]["lastObservedAt"] = serde_json::json!(8640000000000000_u64);
+        value["games"]["garden"]["pots"] = serde_json::json!(vec![
+            serde_json::json!({
+                "species":39, "plantedAt":8640000000000000_u64, "watered":true
+            });
+            12
+        ]);
+        let state: AppState = serde_json::from_value(value.clone()).unwrap();
+        state.validate().unwrap();
+        assert_eq!(
+            serde_json::to_value(
+                parse_backup(&serde_json::to_vec(&backup_value(value.clone())).unwrap())
+                    .unwrap()
+                    .state
+            )
+            .unwrap(),
+            value
+        );
+    }
+
+    #[test]
+    fn v2_rejects_sum_overflow_and_accepts_integral_json_numbers() {
+        let good = populated_v2();
+        for game in ["mine", "garden"] {
+            let mut value = good.clone();
+            let (counts, total) = if game == "mine" {
+                ("collected", "totalMined")
+            } else {
+                ("harvested", "totalHarvests")
+            };
+            value["games"][game][counts][0] = serde_json::json!(1000000000000_u64);
+            value["games"][game][total] = serde_json::json!(1000000000000_u64);
+            assert!(parse_backup(&serde_json::to_vec(&backup_value(value)).unwrap()).is_err());
+        }
+        let text = serde_json::to_string(&backup_value(good))
+            .unwrap()
+            .replace("\"depth\":101", "\"depth\":101.0")
+            .replace("\"coins\":234", "\"coins\":2.34e2");
+        let parsed = parse_backup(text.as_bytes()).unwrap();
+        assert_eq!(
+            serde_json::to_value(parsed.state).unwrap()["games"]["mine"]["coins"],
+            234
+        );
+    }
+
     #[test]
     fn rejects_future_schema_invalid_timestamp_and_unsafe_revision() {
         let mut value = state(0);
-        value.schema_version = 2;
+        value.schema_version = 3;
         assert!(value.validate().is_err());
-        value.schema_version = 1;
+        value.schema_version = 2;
         value.updated_at = "2026-02-31T12:00:00Z".into();
         assert!(value.validate().is_err());
         value.updated_at = "2026-10-28T01:00:00Z".into();
@@ -411,7 +973,7 @@ mod tests {
         let store = Store::new(directory.path().to_owned());
         store.save_at(&state(8), now(28)).unwrap();
         let mut invalid = state(2);
-        invalid.schema_version = 2;
+        invalid.schema_version = 3;
         assert!(store.restore_at(&invalid, now(28)).is_err());
         assert_eq!(store.load().unwrap(), Some(state(8)));
         store.restore_at(&state(2), now(28)).unwrap();
@@ -451,7 +1013,7 @@ mod tests {
         let original = b"{corrupted original bytes}";
         fs::write(directory.path().join("state.json"), original).unwrap();
         let mut invalid = state(1);
-        invalid.schema_version = 2;
+        invalid.schema_version = 3;
         assert!(store.restore_at(&invalid, now(28)).is_err());
         assert_eq!(
             fs::read(directory.path().join("state.json")).unwrap(),

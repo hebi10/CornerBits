@@ -11,7 +11,14 @@ export async function loadState(): Promise<AppState | null> {
     return state === null ? null : parseState(JSON.stringify(state));
   }
   const stored = localStorage.getItem(previewKey);
-  return stored === null ? null : parseState(stored);
+  if (stored === null) return null;
+  const state = parseState(stored);
+  if (JSON.parse(stored).schemaVersion === 1) {
+    // Keep the exact original before replacing a validated legacy save.
+    localStorage.setItem(`cornerbits.preview.pre-migration.${crypto.randomUUID()}`, stored);
+    localStorage.setItem(previewKey, JSON.stringify(state));
+  }
+  return state;
 }
 
 export async function saveState(state: AppState): Promise<void> {

@@ -1,0 +1,25 @@
+.garden { min-width: 0; }
+.garden-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; min-height: 20px; }
+.garden-heading h1 { font-size: 15px; }
+.garden-heading > span { font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.garden-tools { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 5px; margin-top: 5px; }
+.garden-tools select { width: 100%; min-width: 0; height: 28px; border: 1px solid #bdbdb8; border-radius: 0; padding: 3px 4px; background: #fff; color: #252525; font: inherit; font-size: 11px; }
+.garden-tools select:disabled { color: #777; background: #ecece8; }
+.garden-tools button { min-height: 28px; padding: 3px 5px; font-size: 10px; white-space: nowrap; }
+.garden select:focus-visible, .garden summary:focus-visible { outline: 2px solid #252525; outline-offset: 2px; }
+.garden-pots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px; margin-top: 6px; }
+.garden-pot { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 2px; min-width: 0; height: 38px; min-height: 38px; padding: 3px 2px; line-height: 1.2; }
+.garden-pot-name { display: block; font-size: 10px; max-width: 100%; overflow-wrap: anywhere; }
+.garden-pot-action { display: block; font-size: 10px; font-variant-numeric: tabular-nums; }
+.garden-pot-ready { color: #fff; background: #353535; border-color: #353535; }
+.garden-pot:disabled { color: #595959; }
+.garden-details { margin-top: 7px; font-size: 11px; }
+.garden-details summary { min-height: 24px; cursor: pointer; padding: 4px 0; }
+.garden-details-body { max-height: 210px; overflow-y: auto; padding: 1px 3px 4px 0; }
+.garden-details-body p { margin: 7px 0 10px; color: #595959; font-size: 11px; line-height: 1.65; word-break: keep-all; }
+.garden-collection { list-style: none; padding: 0; margin: 0; }
+.garden-collection li { padding: 5px 3px; }
+.garden-collection li:nth-child(odd) { background: #e8e8e3; }
+.garden-collection li > div { display: flex; justify-content: space-between; gap: 6px; }
+.garden-collection small { display: block; margin-top: 3px; font-size: 10px; color: #595959; }
+.garden-locked { color: #595959; }
