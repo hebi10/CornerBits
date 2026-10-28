@@ -1,11 +1,11 @@
 import { initialMine, parseMine, type MineState } from '../games/mine';
 import { initialGarden, migrateGarden, parseGarden, type GardenState } from '../games/garden';
 import { initialCircuit, parseCircuit, type CircuitState } from '../games/circuit';
-import { initialFishing, parseFishing, type FishingState } from '../games/fishing';
+import { initialFishing, migrateFishing, parseFishing, type FishingState } from '../games/fishing';
 import { initialSword, parseSword, type SwordState } from '../games/sword';
 
 export interface AppState {
-  schemaVersion: 5;
+  schemaVersion: 6;
   revision: number;
   updatedAt: string;
   settings: { alwaysOnTop: boolean; compact: boolean };
@@ -53,7 +53,7 @@ function validateState(value: unknown): AppState {
   if (!isRecord(value)) {
     throw new Error('저장 파일 형식이 올바르지 않습니다.');
   }
-  if (![1, 2, 3, 4, 5].includes(value.schemaVersion as number)) {
+  if (![1, 2, 3, 4, 5, 6].includes(value.schemaVersion as number)) {
     throw new Error('지원하지 않는 저장 버전입니다. CornerBits 버전을 확인해 주세요.');
   }
   const keys = ['schemaVersion', 'revision', 'updatedAt', 'settings'];
@@ -76,14 +76,14 @@ function validateState(value: unknown): AppState {
   if (value.schemaVersion === 1) {
     games = { mine: initialMine(), garden: initialGarden(), circuit: initialCircuit(), fishing: initialFishing(), sword: initialSword() };
   } else {
-    const gameKeys = value.schemaVersion === 2 ? ['mine', 'garden'] : value.schemaVersion === 5 ? ['mine', 'garden', 'circuit', 'fishing', 'sword'] : ['mine', 'garden', 'circuit'];
+    const gameKeys = value.schemaVersion === 2 ? ['mine', 'garden'] : Number(value.schemaVersion) >= 5 ? ['mine', 'garden', 'circuit', 'fishing', 'sword'] : ['mine', 'garden', 'circuit'];
     if (!isRecord(value.games) || !hasExactKeys(value.games, gameKeys)) {
       throw new Error('게임 기록 형식이 올바르지 않습니다.');
     }
-    games = { mine: parseMine(value.games.mine), garden: Number(value.schemaVersion) >= 4 ? parseGarden(value.games.garden) : migrateGarden(value.games.garden), circuit: value.schemaVersion === 2 ? initialCircuit() : parseCircuit(value.games.circuit), fishing: value.schemaVersion === 5 ? parseFishing(value.games.fishing) : initialFishing(), sword: value.schemaVersion === 5 ? parseSword(value.games.sword) : initialSword() };
+    games = { mine: parseMine(value.games.mine), garden: Number(value.schemaVersion) >= 4 ? parseGarden(value.games.garden) : migrateGarden(value.games.garden), circuit: value.schemaVersion === 2 ? initialCircuit() : parseCircuit(value.games.circuit), fishing: value.schemaVersion === 6 ? parseFishing(value.games.fishing) : value.schemaVersion === 5 ? migrateFishing(value.games.fishing) : initialFishing(), sword: Number(value.schemaVersion) >= 5 ? parseSword(value.games.sword) : initialSword() };
   }
   return {
-    schemaVersion: 5,
+    schemaVersion: 6,
     revision: value.revision,
     updatedAt: value.updatedAt,
     settings: { alwaysOnTop: settings.alwaysOnTop, compact: settings.compact },
@@ -93,7 +93,7 @@ function validateState(value: unknown): AppState {
 
 export function initialState(): AppState {
   return {
-    schemaVersion: 5,
+    schemaVersion: 6,
     revision: 0,
     updatedAt: new Date().toISOString(),
     settings: { alwaysOnTop: false, compact: false },

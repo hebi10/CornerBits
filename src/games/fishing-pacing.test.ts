@@ -8,6 +8,12 @@ describe('fishing progression model', () => {
     expect(isFishingComplete(result.state)).toBe(true);
     expect(parseFishing(result.state)).toEqual(result.state);
     expect(result.state.cast).toBeNull();
+    expect(result.state.inventory).toEqual(Array(36).fill(0));
+    expect(result.state.inventoryBonus).toBe(0);
+    expect(result.actions.sell).toBeGreaterThan(0);
+    expect(result.actions.buyBait).toBeGreaterThan(0);
+    expect(result.inputSeconds).toBe(Object.values(result.actions).reduce((sum, count) => sum + count, 0));
+    expect(result.state.unlockedLocations).toBe(6);
     expect(result.days).toBeGreaterThanOrEqual(55);
     expect(result.days).toBeLessThanOrEqual(72);
     for (const session of result.sessions) {

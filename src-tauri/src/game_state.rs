@@ -298,6 +298,14 @@ pub struct FishingState {
     pub bait: u64,
     #[serde(deserialize_with = "deserialize_integers")]
     pub caught: Vec<u64>,
+    #[serde(deserialize_with = "deserialize_integers")]
+    pub inventory: Vec<u64>,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub inventory_bonus: u64,
+    #[serde(deserialize_with = "deserialize_integers")]
+    pub bait_stock: Vec<u64>,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub unlocked_locations: u64,
     #[serde(deserialize_with = "deserialize_integer")]
     pub total_caught: u64,
     #[serde(deserialize_with = "deserialize_integer")]
@@ -323,6 +331,10 @@ impl Default for FishingState {
             location: 0,
             bait: 0,
             caught: vec![0; 36],
+            inventory: vec![0; 36],
+            inventory_bonus: 0,
+            bait_stock: vec![0; 2],
+            unlocked_locations: 1,
             total_caught: 0,
             casts: 0,
             misses: 0,
@@ -343,6 +355,18 @@ impl FishingState {
             || self.bait > 2
             || self.caught.len() != 36
             || !valid_total(&self.caught, self.total_caught)
+            || self.inventory.len() != 36
+            || self
+                .inventory
+                .iter()
+                .zip(&self.caught)
+                .any(|(stock, caught)| stock > caught)
+            || self.inventory.iter().sum::<u64>() > self.total_caught
+            || self.inventory_bonus > MAX_COUNT
+            || self.bait_stock.len() != 2
+            || self.bait_stock.iter().any(|count| *count > MAX_COUNT)
+            || !(1..=6).contains(&self.unlocked_locations)
+            || self.location >= self.unlocked_locations
             || self.casts > MAX_COUNT
             || self.misses > MAX_COUNT
             || self.streak > self.best_streak
@@ -364,7 +388,80 @@ impl FishingState {
         {
             return Err("낚시 저장 데이터가 올바르지 않습니다.".into());
         }
+        let base_sale_value =
+            self.inventory
+                .iter()
+                .enumerate()
+                .fold(0_u128, |total, (species, count)| {
+                    total
+                        + u128::from(*count)
+                            * (12 + species as u128 / 6 * 8 + species as u128 % 6 * 12)
+                });
+        if u128::from(self.inventory_bonus) > base_sale_value / 2 {
+            return Err("낚시 판매 보너스가 올바르지 않습니다.".into());
+        }
         Ok(())
+    }
+}
+
+// Before v6, catches paid coins immediately and no sale stock was stored.
+// Keep that exact shape separate so migration cannot credit those catches twice.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct LegacyFishingState {
+    #[serde(deserialize_with = "deserialize_integer")]
+    rng: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    coins: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    rod: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    location: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    bait: u64,
+    #[serde(deserialize_with = "deserialize_integers")]
+    caught: Vec<u64>,
+    #[serde(deserialize_with = "deserialize_integer")]
+    total_caught: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    casts: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    misses: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    streak: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    best_streak: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    last_observed_at: u64,
+    #[serde(deserialize_with = "deserialize_cast")]
+    cast: Option<FishingCast>,
+}
+
+impl From<LegacyFishingState> for FishingState {
+    fn from(previous: LegacyFishingState) -> Self {
+        let unlocked_from_catches = [0, 70, 220, 450, 800, 1200]
+            .iter()
+            .take_while(|threshold| previous.total_caught >= **threshold)
+            .count() as u64;
+        Self {
+            rng: previous.rng,
+            coins: previous.coins,
+            rod: previous.rod,
+            location: previous.location,
+            bait: previous.bait,
+            caught: previous.caught,
+            inventory: vec![0; 36],
+            inventory_bonus: 0,
+            bait_stock: vec![0; 2],
+            unlocked_locations: unlocked_from_catches.max(previous.location.saturating_add(1)),
+            total_caught: previous.total_caught,
+            casts: previous.casts,
+            misses: previous.misses,
+            streak: previous.streak,
+            best_streak: previous.best_streak,
+            last_observed_at: previous.last_observed_at,
+            cast: previous.cast,
+        }
     }
 }
 

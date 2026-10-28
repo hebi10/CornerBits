@@ -11,7 +11,7 @@ async function legacy(version: number) {
     schemaVersion: 1, revision: 8, updatedAt: '2026-10-28T01:00:00Z',
     settings: { alwaysOnTop: true, compact: false },
   };
-  const names: Record<number, string> = { 2: 'phase-two', 3: 'phase-three', 4: 'phase-four' };
+  const names: Record<number, string> = { 2: 'phase-two', 3: 'phase-three', 4: 'phase-four', 5: 'phase-five' };
   return JSON.parse(await readFile(`tests/fixtures/${names[version]}.cornerbits`, 'utf8')).state;
 }
 
@@ -35,7 +35,7 @@ async function assertNewNavigation(page: Page) {
   }
 }
 
-for (const version of [1, 2, 3, 4]) {
+for (const version of [1, 2, 3, 4, 5]) {
   test(`v${version} migration preserves its exact source once and shows the three replacement games`, async ({ page }) => {
     const previous = await legacy(version);
     const original = `${JSON.stringify(previous, null, 2)}\n`;
@@ -46,7 +46,7 @@ for (const version of [1, 2, 3, 4]) {
     }, original);
     await page.goto('/');
     const migrated = await saved(page);
-    expect(migrated.schemaVersion).toBe(5);
+    expect(migrated.schemaVersion).toBe(6);
     expect(migrated.revision).toBe(previous.revision);
     expect(migrated.updatedAt).toBe(previous.updatedAt);
     expect(migrated.settings).toEqual(previous.settings);
@@ -56,6 +56,12 @@ for (const version of [1, 2, 3, 4]) {
         ? { ...previous.games.garden, unlockedSpecies: 1 } : previous.games.garden);
     }
     if (version >= 3) expect(migrated.games.circuit).toEqual(previous.games.circuit);
+    if (version === 5) {
+      expect(migrated.games.fishing).toMatchObject(previous.games.fishing);
+      expect(migrated.games.fishing.inventory).toEqual(Array(36).fill(0));
+      expect(migrated.games.fishing.baitStock).toEqual([0, 0]);
+      expect(migrated.games.sword).toEqual(previous.games.sword);
+    }
     expect(migrated.games.fishing).toMatchObject({ totalCaught: 0, casts: 0, cast: null });
     expect(migrated.games.sword).toMatchObject({ level: 0, attempts: 0 });
     await assertNewNavigation(page);
@@ -96,13 +102,13 @@ for (const version of [1, 2, 3, 4]) {
     await importState(page, previous);
     await expect(page.getByText(version === 1
       ? '1단계 설정 백업입니다. 복원하면 세 게임 진행도가 처음 상태로 바뀝니다.'
-      : '이전 게임 구성의 백업입니다. 정원과 광산·회로 기록은 보존하고, 낚시와 검 키우기는 처음 상태로 복원합니다.')).toBeVisible();
+      : version === 5 ? '판매 기능 이전 백업입니다. 기존 코인·도감은 유지하고 판매 재고·미끼 재고는0으로 시작합니다. 이미 정산된 물고기를 다시 지급하지 않습니다.' : '이전 게임 구성의 백업입니다. 정원과 광산·회로 기록은 보존하고, 낚시와 검 키우기는 처음 상태로 복원합니다.')).toBeVisible();
     await page.getByRole('button', { name: '취소', exact: true }).click();
     expect((await saved(page)).games).toEqual(before.games);
     await importState(page, previous);
     await page.getByRole('button', { name: '이 백업으로 복원', exact: true }).click();
     const restored = await saved(page);
-    expect(restored.schemaVersion).toBe(5);
+    expect(restored.schemaVersion).toBe(6);
     expect(restored.games.sword).toMatchObject({ level: 0, ore: 0, totalPolishes: 0 });
     expect(restored.games.fishing).toMatchObject({ totalCaught: 0, casts: 0, cast: null });
     if (version >= 2) expect(restored.games.mine).toEqual(previous.games.mine);
@@ -130,8 +136,8 @@ test('malformed v5 fishing and sword backups cannot replace the saved progress',
   }
 });
 
-test('current v5 fixture keeps archived mine and circuit records while the replacement games are played', async ({ page }) => {
-  const state = JSON.parse(await readFile('tests/fixtures/phase-five.cornerbits', 'utf8')).state;
+test('current v6 fixture keeps archived mine and circuit records while the replacement games are played', async ({ page }) => {
+  const state = JSON.parse(await readFile('tests/fixtures/phase-six.cornerbits', 'utf8')).state;
   await page.addInitScript(value => {
     if (localStorage.getItem('cornerbits.preview.state') === null) {
       localStorage.setItem('cornerbits.preview.state', JSON.stringify(value));

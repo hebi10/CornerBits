@@ -22,11 +22,15 @@ People who want small, quiet, offline games at the edge of a Windows desktop.
 
 Three independent games with persistent growth: timing-based fishing, an offline growing garden, and probabilistic sword growth with a guaranteed alternative. Each game's major goals target about 60 days at 10–15 minutes per day. On 2026-10-28 the user approved replacing the mine and circuit with fishing and sword growth. Their old data stays archived in backups; they are not extra visible games.
 
+The v0.5.0 fishing loop is catching and holding fish, selling them for coins, buying better bait, collecting species, and permanently opening new fishing areas. The main scene is an angler in a small boat.
+
 ## Capabilities and Constraints
 
 - Monochrome pixel-art desktop game, replacing the earlier cute smiling ornament style at the user's latest request. Fish, plants, swords and utility icons have no anthropomorphic faces. Pixel-step motion and a Gulim-first font match the graphic style. Picture controls, transparent surfaces, readable exact information and the management archive remain. No shadows, rounded cards, or unsolicited sound.
 - Growth, fishing bites, and sword upgrades should be visible in the art; exact names, odds and counts remain available in controls and collections. Honor reduced motion and pause hidden content.
-- Progress is tuned without daily limits. Use docs/balance.md: about58–61 modeled days at12.5 minutes per game, explicitly including bite/growth/polish waits. Sword variance and player strategy affect completion. Garden seeds stay permanently unlocked.
+- Progress is tuned without daily limits. Use docs/balance.md: about58–62 modeled days at12.5 minutes per game, explicitly including bite/growth/polish waits. Sword variance and player strategy affect completion. Garden seeds stay permanently unlocked.
+- Fishing holds caught fish until sale, preserving collection counts afterward. Free basic bait has a 7% rare-fish share; paid packs contain five baits for 50/150 coins with 12/27% rare-fish shares. Casting consumes one paid bait even on a miss. New regions require cumulative catch milestones plus four species from the preceding region and remain permanently open.
+- Schema6 preserves v5 coins, collection, active cast, RNG, and all other existing fields. Previously auto-paid catches do not become sale stock again; inventory, sale premium, and premium-bait stock start empty. Original bytes must be snapshotted before migration, and snapshot failure must preserve the original save.
 - Preserve saved data outside the installation directory.
 - Backup and restore must validate input and preserve the current state before replacement.
 - No server, accounts, push, or publication in the current phase.

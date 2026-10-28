@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { initialFishing, parseFishing, reduceFishing, isFishingComplete, isLocationUnlocked, type FishingState } from './fishing';
+import {
+  baitPackPrice, baitRareChance, fishSalePrice, fishingSaleValue, initialFishing, migrateFishing, parseFishing,
+  reduceFishing, isFishingComplete, isLocationUnlocked, type FishingState,
+} from './fishing';
 import Fishing, { confirmedFishingFeedback } from './Fishing.tsx';
 
 function cast(state = initialFishing(), now = 1_000) {
@@ -14,6 +17,14 @@ function catchFish(state: FishingState, now: number) {
 }
 
 describe('fishing timing and persistence', () => {
+  it('keeps a caught fish in sale inventory without immediately crediting coins', () => {
+    const before = { ...initialFishing(), coins: 123 };
+    const waiting = cast(before);
+    const caught = reduceFishing(waiting, { type: 'hook' }, waiting.cast!.biteAt);
+    expect(caught.coins).toBe(123);
+    expect(caught.inventory[waiting.cast!.species]).toBe(1);
+    expect(caught.inventoryBonus).toBeGreaterThan(0);
+  });
   it('stores a deterministic species and bite time before the timing action', () => {
     const before = initialFishing();
     const waiting = cast(before);
@@ -28,12 +39,13 @@ describe('fishing timing and persistence', () => {
     expect(cast(before)).toEqual(waiting);
   });
 
-  it('counts one catch and reward only once at the opening boundary', () => {
+  it('counts one catch and its pending sale value only once at the opening boundary', () => {
     const waiting = cast();
     const caught = reduceFishing(waiting, { type: 'hook' }, waiting.cast!.biteAt);
     expect(caught.totalCaught).toBe(1);
     expect(caught.caught[waiting.cast!.species]).toBe(1);
-    expect(caught.coins).toBeGreaterThan(0);
+    expect(caught.coins).toBe(0);
+    expect(fishingSaleValue(caught)).toBeGreaterThan(0);
     expect(caught.streak).toBe(1);
     expect(caught.bestStreak).toBe(1);
     expect(caught.cast).toBeNull();
@@ -74,7 +86,7 @@ describe('fishing collection and upgrades', () => {
   it('locks locations, respects selected bait, and prevents changing an active cast', () => {
     const initial = initialFishing();
     expect(reduceFishing(initial, { type: 'location', index: 1 }, 1_000)).toBe(initial);
-    const bait = reduceFishing(initial, { type: 'bait', index: 2 }, 1_000);
+    const bait = reduceFishing({ ...initial, coins: 150 }, { type: 'buy-bait', index: 2 }, 1_000);
     expect(bait.bait).toBe(2);
     const waiting = cast(bait);
     expect(reduceFishing(waiting, { type: 'bait', index: 1 }, 2_000)).toBe(waiting);
@@ -97,14 +109,12 @@ describe('fishing collection and upgrades', () => {
     let state = initialFishing();
     let now = 0;
     for (let fish = 0; fish < 1_500; fish += 1) {
-      for (let location = 5; location >= 0; location -= 1) {
-        if (isLocationUnlocked(state, location)) {
-          state = reduceFishing(state, { type: 'location', index: location }, now);
-          break;
-        }
-      }
+      const location = [0, 1, 2, 3, 4, 5].find((area) => isLocationUnlocked(state, area)
+        && state.caught.slice(area * 6, area * 6 + 6).some((count) => count === 0));
+      if (location !== undefined) state = reduceFishing(state, { type: 'location', index: location }, now);
       state = catchFish(state, now);
       now = state.lastObservedAt + 1_000;
+      state = reduceFishing(state, { type: 'sell' }, now);
       state = reduceFishing(state, { type: 'upgrade' }, now);
     }
     expect(state.totalCaught).toBe(1_500);
@@ -146,11 +156,11 @@ describe('fishing state validation', () => {
 });
 
 describe('fishing picture controls and confirmed feedback', () => {
-  it('shows a catch only after a matching state transition and uses the actual coin gain', () => {
+  it('shows a catch only after a matching state transition and reports its held sale value', () => {
     const waiting = cast({ ...initialFishing(), coins: 999_999_999_999 });
     const action = { type: 'hook' as const };
     const caught = reduceFishing(waiting, action, waiting.cast!.biteAt);
-    expect(confirmedFishingFeedback(waiting, caught, action)).toEqual({ type: 'catch', species: waiting.cast!.species, reward: 1, discovered: true });
+    expect(confirmedFishingFeedback(waiting, caught, action)).toEqual({ type: 'catch', species: waiting.cast!.species, reward: fishingSaleValue(caught) - fishingSaleValue(waiting), discovered: true });
     expect(confirmedFishingFeedback(waiting, waiting, action)).toBeNull();
     expect(confirmedFishingFeedback(waiting, { ...waiting }, action)).toBeNull();
     const missed = reduceFishing(waiting, action, waiting.cast!.expiresAt);
@@ -164,7 +174,166 @@ describe('fishing picture controls and confirmed feedback', () => {
     expect(html).toContain('aria-label="미끼 고르기"');
     expect(html).toContain('aria-label="낚시터 고르기"');
     expect(html).toMatch(/<option value="5" disabled="">/);
-    expect(html).toContain('0/1,500마리');
+    expect(html).toContain('다음 갈대 개울 · 0/70마리 · 이전 지역 0/4종');
+    expect(html).toMatch(/aria-label="물고기 일괄 판매 0 코인" disabled=""/);
+    expect(html).toMatch(/aria-label="반짝 미끼 5개 구매 150 코인"[^>]*disabled=""/);
     expect(html).toContain('fishing-angler-scene');
+  });
+});
+
+describe('fishing sales and consumable bait', () => {
+  it('sells the held fish and quality premium exactly once without erasing the collection', () => {
+    const held = catchFish({ ...initialFishing(), coins: 123 }, 0);
+    const value = fishingSaleValue(held);
+    const sold = reduceFishing(held, { type: 'sell' }, held.lastObservedAt);
+    expect(sold.coins).toBe(123 + value);
+    expect(sold.inventory).toEqual(Array(36).fill(0));
+    expect(sold.inventoryBonus).toBe(0);
+    expect(sold.caught).toEqual(held.caught);
+    expect(sold.totalCaught).toBe(held.totalCaught);
+    expect(held.inventory.some((count) => count > 0)).toBe(true);
+    expect(reduceFishing(sold, { type: 'sell' }, held.lastObservedAt)).toBe(sold);
+    expect(parseFishing(sold)).toEqual(sold);
+  });
+
+  it('buys an atomic pack and spends one premium bait on a cast, including misses', () => {
+    const empty = initialFishing();
+    expect(reduceFishing(empty, { type: 'buy-bait', index: 1 }, 0)).toBe(empty);
+    expect(reduceFishing(empty, { type: 'bait', index: 2 }, 0)).toBe(empty);
+    const bought = reduceFishing({ ...empty, coins: 500 }, { type: 'buy-bait', index: 2 }, 0);
+    expect(bought.coins).toBe(500 - baitPackPrice(2));
+    expect(bought.baitStock).toEqual([0, 5]);
+    expect(bought.bait).toBe(2);
+    expect(empty.baitStock).toEqual([0, 0]);
+    const waiting = cast(bought);
+    expect(waiting.baitStock).toEqual([0, 4]);
+    expect(reduceFishing(waiting, { type: 'buy-bait', index: 1 }, 2_000)).toBe(waiting);
+    const missed = reduceFishing(waiting, { type: 'hook' }, waiting.cast!.expiresAt);
+    expect(missed.baitStock).toEqual([0, 4]);
+    expect(missed.coins).toBe(bought.coins);
+    expect(parseFishing(missed)).toEqual(missed);
+  });
+
+  it('does not create a paid cast without stock and still settles an expired last bait', () => {
+    const dry = { ...initialFishing(), bait: 2 };
+    expect(cast(dry)).toBe(dry);
+    const waiting = cast({ ...dry, baitStock: [0, 1] });
+    expect(waiting.baitStock).toEqual([0, 0]);
+    const settled = cast(waiting, waiting.cast!.expiresAt);
+    expect(settled.cast).toBeNull();
+    expect(settled.misses).toBe(1);
+    expect(settled.casts).toBe(1);
+    expect(settled.rng).toBe(waiting.rng);
+    expect(parseFishing(settled)).toEqual(settled);
+    expect(reduceFishing(settled, { type: 'bait', index: 0 }, settled.lastObservedAt).bait).toBe(0);
+  });
+
+  it('can sell previously held fish during another cast without changing its saved outcome', () => {
+    const held = catchFish(initialFishing(), 0);
+    const waiting = cast(held, held.lastObservedAt + 1_000);
+    const sold = reduceFishing(waiting, { type: 'sell' }, waiting.lastObservedAt + 500);
+    expect(sold.cast).toEqual(waiting.cast);
+    expect(sold.rng).toBe(waiting.rng);
+    expect(sold.casts).toBe(waiting.casts);
+    expect(sold.coins).toBe(fishingSaleValue(waiting));
+    const caught = reduceFishing(sold, { type: 'hook' }, sold.cast!.biteAt);
+    expect(caught.totalCaught).toBe(2);
+    expect(caught.inventory.reduce((sum, count) => sum + count, 0)).toBe(1);
+    expect(parseFishing(caught)).toEqual(caught);
+  });
+
+  it('refuses sale and pack overflows without consuming the held items or coins', () => {
+    const held = catchFish(initialFishing(), 0);
+    const full = { ...held, coins: 1_000_000_000_000 };
+    expect(reduceFishing(full, { type: 'sell' }, held.lastObservedAt)).toBe(full);
+    const stockFull = { ...initialFishing(), coins: 500, baitStock: [999_999_999_996, 0] };
+    expect(reduceFishing(stockFull, { type: 'buy-bait', index: 1 }, 0)).toBe(stockFull);
+    const fits = reduceFishing({ ...stockFull, baitStock: [999_999_999_995, 0] }, { type: 'buy-bait', index: 1 }, 0);
+    expect(fits.baitStock[0]).toBe(1_000_000_000_000);
+    for (const index of [0, 3, -1, 0.5, NaN]) expect(reduceFishing(stockFull, { type: 'buy-bait', index }, 0)).toBe(stockFull);
+  });
+
+  it('makes better bait favor rare species across a fixed set of random seeds', () => {
+    const rare = [0, 0, 0];
+    for (let seed = 1; seed <= 500; seed += 1) {
+      for (let bait = 0; bait < 3; bait += 1) {
+        const waiting = cast({ ...initialFishing(), rng: seed, bait, baitStock: [1, 1] }, 0);
+        if (waiting.cast!.species % 6 >= 4) rare[bait] += 1;
+      }
+    }
+    expect(rare[1]).toBeGreaterThan(rare[0]);
+    expect(rare[2]).toBeGreaterThan(rare[1]);
+    expect(rare[2]).toBeGreaterThan(rare[0] * 2);
+    expect([0, 1, 2].map(baitRareChance)).toEqual([7, 12, 27]);
+    expect(baitRareChance(3)).toBe(0);
+    for (let bait = 0; bait < 3; bait += 1) expect(Math.abs(rare[bait] / 500 * 100 - baitRareChance(bait))).toBeLessThan(3);
+  });
+});
+
+describe('permanent fishing regions and v5 preservation', () => {
+  it('requires the catch threshold and four previous-region species, then keeps the region open', () => {
+    const locked = initialFishing();
+    locked.caught[0] = 68; locked.caught[1] = 1; locked.caught[2] = 1;
+    locked.totalCaught = 70; locked.casts = 70;
+    expect(isLocationUnlocked(locked, 1)).toBe(false);
+    const waiting = cast(locked, 0);
+    waiting.cast!.species = 3;
+    const unlocked = reduceFishing(waiting, { type: 'hook' }, waiting.cast!.biteAt);
+    expect(unlocked.unlockedLocations).toBe(2);
+    const visited = reduceFishing(unlocked, { type: 'location', index: 1 }, unlocked.lastObservedAt);
+    const returned = reduceFishing(visited, { type: 'location', index: 0 }, visited.lastObservedAt);
+    expect(isLocationUnlocked(returned, 1)).toBe(true);
+    expect(parseFishing(returned)).toEqual(returned);
+    expect(locked.unlockedLocations).toBe(1);
+  });
+
+  it('never makes old auto-paid catches sellable and retains previously opened regions', () => {
+    const state = initialFishing();
+    state.caught[0] = 220; state.totalCaught = 220; state.casts = 220;
+    state.coins = 987; state.location = 1; state.bait = 2;
+    const legacy = Object.fromEntries(Object.entries(state).filter(([key]) => !['inventory', 'inventoryBonus', 'baitStock', 'unlockedLocations'].includes(key)));
+    const migrated = migrateFishing(legacy);
+    expect(migrated.coins).toBe(987);
+    expect(migrated.caught).toEqual(state.caught);
+    expect(migrated.location).toBe(1);
+    expect(migrated.bait).toBe(2);
+    expect(migrated.unlockedLocations).toBe(3);
+    expect(fishingSaleValue(migrated)).toBe(0);
+    expect(reduceFishing(migrated, { type: 'sell' }, 0)).toBe(migrated);
+    expect(parseFishing(migrated)).toEqual(migrated);
+    expect(migrateFishing({ ...legacy, location: 5 }).unlockedLocations).toBe(6);
+    expect(() => migrateFishing(state)).toThrow();
+  });
+
+  it('migrates an active old premium cast without charging or rerolling it', () => {
+    const waiting = cast({ ...initialFishing(), bait: 2, baitStock: [0, 1], coins: 456 }, 5_000);
+    const legacy = Object.fromEntries(Object.entries(waiting).filter(([key]) => !['inventory', 'inventoryBonus', 'baitStock', 'unlockedLocations'].includes(key)));
+    const migrated = migrateFishing(legacy);
+    expect(migrated.cast).toEqual(waiting.cast);
+    expect(migrated.rng).toBe(waiting.rng);
+    expect(migrated.coins).toBe(456);
+    expect(migrated.baitStock).toEqual([0, 0]);
+    const landed = reduceFishing(migrated, { type: 'hook' }, migrated.cast!.biteAt);
+    expect(landed.coins).toBe(456);
+    expect(landed.totalCaught).toBe(1);
+    expect(fishingSaleValue(landed)).toBeGreaterThan(0);
+    expect(parseFishing(landed)).toEqual(landed);
+  });
+
+  it('validates inventory ownership, pending premiums, stock and permanent regions', () => {
+    const held = catchFish(initialFishing(), 0);
+    const price = fishSalePrice(held.cast?.species ?? held.caught.findIndex((count) => count > 0));
+    expect(fishingSaleValue(held)).toBe(price + Math.floor(price / 2));
+    const invalid = [
+      { ...held, inventory: Array(35).fill(0) },
+      { ...held, inventory: Array(36).fill(2) },
+      { ...held, inventoryBonus: 1_000 },
+      { ...held, inventoryBonus: -1 },
+      { ...held, baitStock: [0] }, { ...held, baitStock: [0, -1] },
+      { ...held, baitStock: [0, 1_000_000_000_001] },
+      { ...held, unlockedLocations: 0 }, { ...held, unlockedLocations: 7 },
+      { ...held, location: 1 },
+    ];
+    for (const value of invalid) expect(() => parseFishing(value)).toThrow();
   });
 });

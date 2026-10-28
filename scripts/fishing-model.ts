@@ -1,6 +1,7 @@
 import {
-  FISHING_GOAL, canUpgradeRod, initialFishing, isFishingComplete,
-  isLocationUnlocked, reduceFishing, type FishingAction, type FishingState,
+  FISHING_GOAL, baitPackPrice, canBuyBait, canUpgradeRod, fishingSaleValue,
+  initialFishing, isFishingComplete, isLocationUnlocked, reduceFishing,
+  rodUpgradeCatches, rodUpgradeCost, type FishingAction, type FishingState,
 } from '../src/games/fishing.ts';
 
 export interface FishingSession {
@@ -29,6 +30,7 @@ export interface FishingModel {
   waitingSeconds: number;
   unusedSeconds: number;
   sessions: FishingSession[];
+  actions: { cast: number; hook: number; sell: number; buyBait: number; bait: number; location: number; upgrade: number };
 }
 
 /**
@@ -38,9 +40,12 @@ export interface FishingModel {
  * about real players. Reflective menu/selection time is not separately modeled.
  *
  * The player finishes an area's collection before moving to the earliest
- * unlocked incomplete area. Bait 2 is free. Affordable rod upgrades are taken
- * between casts. A new cast starts only with 36s remaining, so every saved cast
- * is resolved within its visit. No catches or resources are earned offline.
+ * unlocked incomplete area. Held fish are sold when funds are needed and at
+ * the end of a visit. Rod upgrades are taken before buying packs of bait 2;
+ * if that bait cannot be bought, the free basic bait remains available.
+ * Sale, purchase, selection and upgrade each take one input second too.
+ * A new cast starts only with 36s remaining, so every saved cast is resolved
+ * within its visit. No catches or resources are earned offline.
  */
 export function simulateFishing(options: FishingModelOptions = {}): FishingModel {
   const { sessionMinutes = 12.5, seed = 0x6d2b79f5, missesPer20 = 2, maxDays = 365 } = options;
@@ -52,6 +57,7 @@ export function simulateFishing(options: FishingModelOptions = {}): FishingModel
 
   let state = { ...initialFishing(), rng: seed };
   const sessions: FishingSession[] = [];
+  const actions = { cast: 0, hook: 0, sell: 0, buyBait: 0, bait: 0, location: 0, upgrade: 0 };
   for (let day = 1; day <= maxDays; day += 1) {
     const start = (day - 1) * 86_400_000;
     const end = start + budgetMs;
@@ -67,14 +73,21 @@ export function simulateFishing(options: FishingModelOptions = {}): FishingModel
       const next = reduceFishing(state, action, now);
       if (next === state) throw new Error(`낚시 모델의 ${action.type} 행동이 진행되지 않았습니다.`);
       state = next;
+      actions[action.type === 'buy-bait' ? 'buyBait' : action.type] += 1;
       now += 1_000;
       inputMs += 1_000;
     }
 
     while (now + 37_000 <= end && !isFishingComplete(state)) {
+      const needsUpgradeFunds = state.rod < 8 && state.totalCaught >= rodUpgradeCatches(state.rod)
+        && state.coins < rodUpgradeCost(state.rod);
+      const needsBaitFunds = state.baitStock[1] === 0 && state.coins < baitPackPrice(2);
+      if ((needsUpgradeFunds || needsBaitFunds) && fishingSaleValue(state) > 0) perform({ type: 'sell' });
       if (canUpgradeRod(state)) perform({ type: 'upgrade' });
       if (isFishingComplete(state)) break;
-      if (state.bait !== 2) perform({ type: 'bait', index: 2 });
+      if (state.baitStock[1] === 0 && canBuyBait(state, 2)) perform({ type: 'buy-bait', index: 2 });
+      const bait = state.baitStock[1] > 0 ? 2 : 0;
+      if (state.bait !== bait) perform({ type: 'bait', index: bait });
       const incompleteArea = [0, 1, 2, 3, 4, 5].find((area) =>
         isLocationUnlocked(state, area) && state.caught.slice(area * 6, area * 6 + 6).some((count) => count === 0));
       // After collecting all open areas, continue there until the next one opens.
@@ -89,9 +102,13 @@ export function simulateFishing(options: FishingModelOptions = {}): FishingModel
       waitingMs += target - now;
       now = target;
       perform({ type: 'hook' });
+      if (state.rod < 8 && state.totalCaught >= rodUpgradeCatches(state.rod)
+        && state.coins < rodUpgradeCost(state.rod) && fishingSaleValue(state) > 0 && now + 1_000 <= end) perform({ type: 'sell' });
       if (canUpgradeRod(state) && now + 1_000 <= end) perform({ type: 'upgrade' });
     }
     if (state.cast !== null) throw new Error('낚시 모델이 진행 중인 캐스트를 남겼습니다.');
+    if (fishingSaleValue(state) > 0 && now + 1_000 <= end) perform({ type: 'sell' });
+    if (canUpgradeRod(state) && now + 1_000 <= end) perform({ type: 'upgrade' });
     if (!isFishingComplete(state)) { unusedMs = end - now; now = end; }
     sessions.push({
       day, catches: state.totalCaught - caughtBefore, misses: state.misses - missedBefore,
@@ -99,7 +116,7 @@ export function simulateFishing(options: FishingModelOptions = {}): FishingModel
       unusedSeconds: unusedMs / 1_000, elapsedSeconds: (now - start) / 1_000,
     });
     if (isFishingComplete(state)) return {
-      state, days: day, sessionMinutes, missesPer20, sessions,
+      state, days: day, sessionMinutes, missesPer20, sessions, actions,
       inputSeconds: sessions.reduce((sum, visit) => sum + visit.inputSeconds, 0),
       waitingSeconds: sessions.reduce((sum, visit) => sum + visit.waitingSeconds, 0),
       unusedSeconds: sessions.reduce((sum, visit) => sum + visit.unusedSeconds, 0),

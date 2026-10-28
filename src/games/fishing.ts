@@ -19,12 +19,18 @@ export interface FishingState {
   bestStreak: number;
   lastObservedAt: number;
   cast: FishingCast | null;
+  inventory: number[];
+  inventoryBonus: number;
+  baitStock: number[];
+  unlockedLocations: number;
 }
 
 export type FishingAction =
   | { type: 'cast' }
   | { type: 'hook' }
   | { type: 'upgrade' }
+  | { type: 'sell' }
+  | { type: 'buy-bait'; index: number }
   | { type: 'location'; index: number }
   | { type: 'bait'; index: number };
 
@@ -34,7 +40,9 @@ export const FISHING_GOAL = 1_500;
 export const LOCATION_REQUIREMENTS = [0, 70, 220, 450, 800, 1_200] as const;
 export const locationNames = ['조약돌 연못', '갈대 개울', '달빛 호수', '조개 해변', '안개 만', '별빛 바다'] as const;
 export const BAITS = ['빵 부스러기', '풀잎 미끼', '반짝 미끼'] as const;
-export const BAIT_HINTS = ['일반 어종 비중이 높은 미끼', '두 번째·세 번째 어종 비중이 높은 미끼', '희귀 어종 비중을 높인 미끼'] as const;
+export const BAIT_HINTS = ['무료 기본 미끼', '희귀 어종 비중을 조금 높인 소모 미끼', '희귀 어종 비중을 더 높인 소모 미끼'] as const;
+export const BAIT_PACK_SIZE = 5;
+export const BAIT_PACK_PRICES = [0, 50, 150] as const;
 export const FISH = [
   '새싹 붕어', '동글 송사리', '줄무늬 납자루', '물방울 미꾸리', '별눈 잉어', '은빛 금붕어',
   '갈대 피라미', '돌돌 버들치', '풀잎 참마자', '긴꼬리 쉬리', '반달 연준모치', '꽃무늬 산천어',
@@ -48,20 +56,50 @@ const UPGRADE_CATCHES = [25, 90, 220, 450, 800, 1_200, FISHING_GOAL] as const;
 const UPGRADE_COINS = [150, 500, 1_500, 3_500, 7_000, 12_000, 18_000] as const;
 const BAIT_WEIGHTS = [
   [42, 25, 16, 10, 5, 2],
-  [22, 34, 25, 12, 5, 2],
-  [25, 20, 20, 17, 12, 6],
+  [30, 25, 20, 13, 8, 4],
+  [12, 18, 23, 20, 17, 10],
 ] as const;
 
+export function baitRareChance(index: number): number {
+  if (!Number.isInteger(index) || index < 0 || index >= BAIT_WEIGHTS.length) return 0;
+  return BAIT_WEIGHTS[index][4] + BAIT_WEIGHTS[index][5];
+}
+
 export function initialFishing(): FishingState {
-  return { rng: 0x6d2b79f5, coins: 0, rod: 1, location: 0, bait: 0, caught: Array(36).fill(0), totalCaught: 0, casts: 0, misses: 0, streak: 0, bestStreak: 0, lastObservedAt: 0, cast: null };
+  return { rng: 0x6d2b79f5, coins: 0, rod: 1, location: 0, bait: 0, caught: Array(36).fill(0), totalCaught: 0, casts: 0, misses: 0, streak: 0, bestStreak: 0, lastObservedAt: 0, cast: null, inventory: Array(36).fill(0), inventoryBonus: 0, baitStock: [0, 0], unlockedLocations: 1 };
 }
 
 export function fishingNow(state: FishingState, now: number): number {
   return Math.max(state.lastObservedAt, Number.isSafeInteger(now) ? Math.min(FISHING_TIME_LIMIT, Math.max(0, now)) : state.lastObservedAt);
 }
 
-export function isLocationUnlocked(state: Pick<FishingState, 'totalCaught'>, location: number): boolean {
-  return Number.isInteger(location) && location >= 0 && location < locationNames.length && state.totalCaught >= LOCATION_REQUIREMENTS[location];
+export function isLocationUnlocked(state: Pick<FishingState, 'unlockedLocations'>, location: number): boolean {
+  return Number.isInteger(location) && location >= 0 && location < locationNames.length && location < state.unlockedLocations;
+}
+
+export function locationSpeciesCount(state: Pick<FishingState, 'caught'>, location: number): number {
+  return state.caught.slice(location * 6, location * 6 + 6).filter((count) => count > 0).length;
+}
+
+export function fishSalePrice(species: number): number {
+  return Number.isInteger(species) && species >= 0 && species < 36 ? 12 + Math.floor(species / 6) * 8 + species % 6 * 12 : 0;
+}
+
+export function fishingSaleValue(state: Pick<FishingState, 'inventory' | 'inventoryBonus'>): number {
+  return state.inventory.reduce((sum, count, species) => sum + count * fishSalePrice(species), state.inventoryBonus);
+}
+
+export function hasBait(state: Pick<FishingState, 'bait' | 'baitStock'>): boolean {
+  return state.bait === 0 || state.baitStock[state.bait - 1] > 0;
+}
+
+export function baitPackPrice(index: number): number {
+  return BAIT_PACK_PRICES[index as 0 | 1 | 2] ?? 0;
+}
+
+export function canBuyBait(state: FishingState, index: number): boolean {
+  return Number.isInteger(index) && index >= 1 && index <= 2 && state.cast === null
+    && state.coins >= baitPackPrice(index) && state.baitStock[index - 1] <= FISHING_COUNT_LIMIT - BAIT_PACK_SIZE;
 }
 
 export function rodUpgradeCost(rod: number): number { return UPGRADE_COINS[rod - 1] ?? 0; }
@@ -102,8 +140,20 @@ export function reduceFishing(state: FishingState, action: FishingAction, now: n
       : { ...state, location: action.index, lastObservedAt: observedAt };
   }
   if (action.type === 'bait') {
-    return state.cast !== null || !Number.isInteger(action.index) || action.index < 0 || action.index > 2 || action.index === state.bait ? state
+    return state.cast !== null || !Number.isInteger(action.index) || action.index < 0 || action.index > 2 || action.index === state.bait
+      || action.index > 0 && state.baitStock[action.index - 1] === 0 ? state
       : { ...state, bait: action.index, lastObservedAt: observedAt };
+  }
+  if (action.type === 'sell') {
+    const value = fishingSaleValue(state);
+    return value <= 0 || value > FISHING_COUNT_LIMIT - state.coins ? state
+      : { ...state, coins: state.coins + value, inventory: Array(36).fill(0), inventoryBonus: 0, lastObservedAt: observedAt };
+  }
+  if (action.type === 'buy-bait') {
+    if (!canBuyBait(state, action.index)) return state;
+    const baitStock = [...state.baitStock];
+    baitStock[action.index - 1] += BAIT_PACK_SIZE;
+    return { ...state, coins: state.coins - baitPackPrice(action.index), baitStock, bait: action.index, lastObservedAt: observedAt };
   }
   if (action.type === 'upgrade') {
     return !canUpgradeRod(state) ? state
@@ -112,12 +162,14 @@ export function reduceFishing(state: FishingState, action: FishingAction, now: n
   if (action.type === 'cast') {
     if (state.cast !== null && observedAt < state.cast.expiresAt) return state;
     const settled = state.cast === null ? state : { ...state, cast: null, misses: state.misses + 1, streak: 0, lastObservedAt: observedAt };
-    if (settled.casts >= FISHING_COUNT_LIMIT || observedAt > FISHING_TIME_LIMIT - 35_000) return settled;
+    if (settled.casts >= FISHING_COUNT_LIMIT || observedAt > FISHING_TIME_LIMIT - 35_000 || !hasBait(settled)) return settled;
     const speciesRoll = random(settled.rng);
     const rng = random(speciesRoll);
     const biteAt = observedAt + 18_000 + rng % 12_001;
+    const baitStock = [...settled.baitStock];
+    if (settled.bait > 0) baitStock[settled.bait - 1] -= 1;
     return {
-      ...settled, rng, casts: settled.casts + 1, lastObservedAt: observedAt,
+      ...settled, rng, baitStock, casts: settled.casts + 1, lastObservedAt: observedAt,
       cast: { startedAt: observedAt, biteAt, expiresAt: biteAt + 5_000, species: chooseSpecies(settled, speciesRoll) },
     };
   }
@@ -129,12 +181,18 @@ export function reduceFishing(state: FishingState, action: FishingAction, now: n
   if (state.totalCaught >= FISHING_COUNT_LIMIT) return state;
   const caught = [...state.caught];
   caught[current.species] += 1;
-  const base = 12 + state.location * 4 + current.species % 6 * 6 + state.rod * 2;
+  const inventory = [...state.inventory];
+  inventory[current.species] += 1;
+  const base = fishSalePrice(current.species);
   const delay = observedAt - current.biteAt;
-  const reward = base + (delay <= 1_000 ? Math.floor(base / 2) : delay <= 3_000 ? Math.floor(base / 4) : 0);
+  const bonus = delay <= 1_000 ? Math.floor(base / 2) : delay <= 3_000 ? Math.floor(base / 4) : 0;
   const streak = state.streak + 1;
+  const totalCaught = state.totalCaught + 1;
+  let unlockedLocations = state.unlockedLocations;
+  while (unlockedLocations < 6 && totalCaught >= LOCATION_REQUIREMENTS[unlockedLocations]
+    && locationSpeciesCount({ caught }, unlockedLocations - 1) >= 4) unlockedLocations += 1;
   return {
-    ...state, cast: null, caught, totalCaught: state.totalCaught + 1, coins: Math.min(FISHING_COUNT_LIMIT, state.coins + reward),
+    ...state, cast: null, caught, totalCaught, inventory, inventoryBonus: Math.min(FISHING_COUNT_LIMIT, state.inventoryBonus + bonus), unlockedLocations,
     streak, bestStreak: Math.max(state.bestStreak, streak), lastObservedAt: observedAt,
   };
 }
@@ -150,8 +208,10 @@ function integer(value: unknown, max = FISHING_COUNT_LIMIT, min = 0): number {
   return value;
 }
 
-export function parseFishing(value: unknown): FishingState {
-  const data = record(value, ['rng', 'coins', 'rod', 'location', 'bait', 'caught', 'totalCaught', 'casts', 'misses', 'streak', 'bestStreak', 'lastObservedAt', 'cast']);
+const LEGACY_KEYS = ['rng', 'coins', 'rod', 'location', 'bait', 'caught', 'totalCaught', 'casts', 'misses', 'streak', 'bestStreak', 'lastObservedAt', 'cast'];
+type LegacyFishingState = Omit<FishingState, 'inventory' | 'inventoryBonus' | 'baitStock' | 'unlockedLocations'>;
+
+function parsePreviousFields(data: Record<string, unknown>): LegacyFishingState {
   const rng = integer(data.rng, 4_294_967_295, 1);
   const coins = integer(data.coins);
   const rod = integer(data.rod, 8, 1);
@@ -177,4 +237,25 @@ export function parseFishing(value: unknown): FishingState {
   if (caught.reduce((sum, count) => sum + count, 0) !== totalCaught
     || casts !== totalCaught + misses + (cast === null ? 0 : 1) || streak > bestStreak || bestStreak > totalCaught) throw new Error('낚시 기록의 합계가 일치하지 않습니다.');
   return { rng, coins, rod, location, bait, caught, totalCaught, casts, misses, streak, bestStreak, lastObservedAt, cast };
+}
+
+export function parseFishing(value: unknown): FishingState {
+  const data = record(value, [...LEGACY_KEYS, 'inventory', 'inventoryBonus', 'baitStock', 'unlockedLocations']);
+  const previous = parsePreviousFields(data);
+  if (!Array.isArray(data.inventory) || data.inventory.length !== 36 || !Array.isArray(data.baitStock) || data.baitStock.length !== 2) throw new Error('낚시 보관함 또는 미끼 재고의 길이가 올바르지 않습니다.');
+  const inventory = Array.from(data.inventory, (count) => integer(count));
+  const inventoryBonus = integer(data.inventoryBonus);
+  const baitStock = Array.from(data.baitStock, (count) => integer(count));
+  const unlockedLocations = integer(data.unlockedLocations, 6, 1);
+  const baseValue = fishingSaleValue({ inventory, inventoryBonus: 0 });
+  if (inventory.some((count, species) => count > previous.caught[species]) || inventoryBonus > Math.floor(baseValue / 2)
+    || previous.location >= unlockedLocations) throw new Error('낚시 보관함 또는 지역 해금 기록이 올바르지 않습니다.');
+  return { ...previous, inventory, inventoryBonus, baitStock, unlockedLocations };
+}
+
+/** v5 catches already paid coins, so migration never makes them sellable again. */
+export function migrateFishing(value: unknown): FishingState {
+  const previous = parsePreviousFields(record(value, LEGACY_KEYS));
+  const unlockedLocations = Math.max(previous.location + 1, LOCATION_REQUIREMENTS.filter((required) => previous.totalCaught >= required).length);
+  return { ...previous, inventory: Array(36).fill(0), inventoryBonus: 0, baitStock: [0, 0], unlockedLocations };
 }
