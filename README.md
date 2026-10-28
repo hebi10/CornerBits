@@ -2,6 +2,10 @@
 
 v0.9.1은 한 번 맡긴 낚시·채집을 계속하며 모은 자원을 집 꾸미기와 확장에 사용하는 작은 해안 생활입니다. 작업 옆에서 이번 작업의 누적 시간과 획득량을 확인할 수 있습니다. 집·나무·부두·작은 배가 하나의 컬러 픽셀 풍경에 놓이고, 280×380 Windows 위젯의 바깥은 투명합니다.
 
+[Windows 다운로드 · 최신 Release](https://github.com/hebi10/CornerBits/releases/latest) · [자동 빌드](https://github.com/hebi10/CornerBits/actions/workflows/windows.yml)
+
+일반 사용자는 Release의 `x64-setup.exe`로 설치합니다. 설치 없이 사용하려면 `windows-x64.zip`을 풀고 `cornerbits.exe`를 실행합니다. Windows 10/11 x64와 WebView2 Runtime이 필요하며 설치 파일은 누락된 WebView2를 인터넷으로 준비합니다. [배포와 빌드 안내](docs/releasing.md)
+
 - 부두나 해변을 한 번 누르면 낚시나 채집을 계속합니다. **기록**에서 고른 10분 또는 15분마다 한 회차를 정산하며 기본값은 10분입니다.
 - 집 1단계에서 10분마다 물고기나 나무 2개, 15분마다 3개를 얻습니다. 집 2·3단계는 이 양의 2·3배를 얻습니다. 물고기는 작업 중에도 물고기 걸이나 집 메뉴에서 한 마리당 15조개코인에 판매합니다.
 - 집을 누르면 꽃화분·등불·벤치를 제작하거나 집을 확장합니다. 장식과 성장한 집은 같은 풍경에 남습니다.
@@ -67,4 +71,4 @@ npm run test:e2e
 npm run build
 ```
 
-기존 테스트는 `index.html`의 보존된 앱을 확인합니다. 해안 생활의 모델·저장 세션·브라우저 테스트는 작업 시간·획득량 집계, 10분·15분 회차와 지연 정산, 중단·판매·간격 변경, 숨김·접힘·메뉴에서의 진행, 성장, 진행 중 재개, 백업 복원, 구버전 이관, 저장 실패 재시도와 실제 크기·모션 감소를 다룹니다. 자산 프롬프트와 출처는 `public/art/coast-prompts.json`, 성장 그림은 `public/art/coast-growth-prompts.json`, 현재 기획은 [연속 작업 명세](docs/superpowers/specs/2026-10-28-coastal-idle.md)와 [해안 성장 명세](docs/superpowers/specs/2026-10-28-coastal-growth.md)에 있습니다. 공개 배포나 설치 프로그램은 구성하지 않았습니다.
+기존 테스트는 `index.html`의 보존된 앱을 확인합니다. 해안 생활의 모델·저장 세션·브라우저 테스트는 작업 시간·획득량 집계, 10분·15분 회차와 지연 정산, 중단·판매·간격 변경, 숨김·접힘·메뉴에서의 진행, 성장, 진행 중 재개, 백업 복원, 구버전 이관, 저장 실패 재시도와 실제 크기·모션 감소를 다룹니다. 자산 프롬프트와 출처는 `public/art/coast-prompts.json`, 성장 그림은 `public/art/coast-growth-prompts.json`, 현재 기획은 [연속 작업 명세](docs/superpowers/specs/2026-10-28-coastal-idle.md)와 [해안 성장 명세](docs/superpowers/specs/2026-10-28-coastal-growth.md)에 있습니다. Windows 설치 파일과 압축 실행본은 GitHub Actions에서 생성하고 버전 태그를 통해 Releases에 공개합니다.
