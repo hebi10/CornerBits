@@ -1,7 +1,7 @@
 import {
   FISHING_GOAL, baitPackPrice, canBuyBait, canUpgradeRod, fishingSaleValue,
   initialFishing, isFishingComplete, isLocationUnlocked, reduceFishing,
-  rodUpgradeCatches, rodUpgradeCost, type FishingAction, type FishingState,
+  rodUpgradeCatches, rodUpgradeCost, rodWaitRange, rodBiteWindow, type FishingAction, type FishingState,
 } from '../src/games/fishing.ts';
 
 export interface FishingSession {
@@ -44,7 +44,8 @@ export interface FishingModel {
  * the end of a visit. Rod upgrades are taken before buying packs of bait 2;
  * if that bait cannot be bought, the free basic bait remains available.
  * Sale, purchase, selection and upgrade each take one input second too.
- * A new cast starts only with 36s remaining, so every saved cast is resolved
+ * A new cast reserves the current equipment's maximum wait + hook window +
+ * 1s hook input, so every saved cast is resolved
  * within its visit. No catches or resources are earned offline.
  */
 export function simulateFishing(options: FishingModelOptions = {}): FishingModel {
@@ -78,7 +79,7 @@ export function simulateFishing(options: FishingModelOptions = {}): FishingModel
       inputMs += 1_000;
     }
 
-    while (now + 37_000 <= end && !isFishingComplete(state)) {
+    while (now + rodWaitRange(state.rod)[1] + rodBiteWindow(state.rod) + 2_000 <= end && !isFishingComplete(state)) {
       const needsUpgradeFunds = state.rod < 8 && state.totalCaught >= rodUpgradeCatches(state.rod)
         && state.coins < rodUpgradeCost(state.rod);
       const needsBaitFunds = state.baitStock[1] === 0 && state.coins < baitPackPrice(2);
@@ -93,7 +94,7 @@ export function simulateFishing(options: FishingModelOptions = {}): FishingModel
       // After collecting all open areas, continue there until the next one opens.
       const area = incompleteArea ?? state.location;
       if (area !== state.location) perform({ type: 'location', index: area });
-      if (now + 36_000 > end) break;
+      if (now + rodWaitRange(state.rod)[1] + rodBiteWindow(state.rod) + 1_000 > end) break;
       perform({ type: 'cast' });
       const current = state.cast;
       if (current === null) throw new Error('낚시 모델에 저장된 캐스트가 없습니다.');

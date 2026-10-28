@@ -23,6 +23,7 @@ export interface FishingState {
   inventoryBonus: number;
   baitStock: number[];
   unlockedLocations: number;
+  keepsakes: number[];
 }
 
 export type FishingAction =
@@ -66,7 +67,7 @@ export function baitRareChance(index: number): number {
 }
 
 export function initialFishing(): FishingState {
-  return { rng: 0x6d2b79f5, coins: 0, rod: 1, location: 0, bait: 0, caught: Array(36).fill(0), totalCaught: 0, casts: 0, misses: 0, streak: 0, bestStreak: 0, lastObservedAt: 0, cast: null, inventory: Array(36).fill(0), inventoryBonus: 0, baitStock: [0, 0], unlockedLocations: 1 };
+  return { rng: 0x6d2b79f5, coins: 0, rod: 1, location: 0, bait: 0, caught: Array(36).fill(0), totalCaught: 0, casts: 0, misses: 0, streak: 0, bestStreak: 0, lastObservedAt: 0, cast: null, inventory: Array(36).fill(0), inventoryBonus: 0, baitStock: [0, 0], unlockedLocations: 1, keepsakes: [] };
 }
 
 export function fishingNow(state: FishingState, now: number): number {
@@ -104,6 +105,12 @@ export function canBuyBait(state: FishingState, index: number): boolean {
 
 export function rodUpgradeCost(rod: number): number { return UPGRADE_COINS[rod - 1] ?? 0; }
 export function rodUpgradeCatches(rod: number): number { return UPGRADE_CATCHES[rod - 1] ?? FISHING_GOAL; }
+export function rodWaitReduction(rod: number): number { return (rod - 1) * 500; }
+export function rodBiteWindow(rod: number): number { return 5_000 + (rod - 1) * 1_000; }
+export function rodWaitRange(rod: number): readonly [number, number] {
+  const reduction = rodWaitReduction(rod);
+  return [18_000 - reduction, 30_000 - reduction];
+}
 export function canUpgradeRod(state: FishingState): boolean {
   return state.cast === null && state.rod < 8 && state.totalCaught >= rodUpgradeCatches(state.rod) && state.coins >= rodUpgradeCost(state.rod);
 }
@@ -162,15 +169,17 @@ export function reduceFishing(state: FishingState, action: FishingAction, now: n
   if (action.type === 'cast') {
     if (state.cast !== null && observedAt < state.cast.expiresAt) return state;
     const settled = state.cast === null ? state : { ...state, cast: null, misses: state.misses + 1, streak: 0, lastObservedAt: observedAt };
-    if (settled.casts >= FISHING_COUNT_LIMIT || observedAt > FISHING_TIME_LIMIT - 35_000 || !hasBait(settled)) return settled;
+    const [minimumWait, maximumWait] = rodWaitRange(settled.rod);
+    const hookWindow = rodBiteWindow(settled.rod);
+    if (settled.casts >= FISHING_COUNT_LIMIT || observedAt > FISHING_TIME_LIMIT - maximumWait - hookWindow || !hasBait(settled)) return settled;
     const speciesRoll = random(settled.rng);
     const rng = random(speciesRoll);
-    const biteAt = observedAt + 18_000 + rng % 12_001;
+    const biteAt = observedAt + minimumWait + rng % 12_001;
     const baitStock = [...settled.baitStock];
     if (settled.bait > 0) baitStock[settled.bait - 1] -= 1;
     return {
       ...settled, rng, baitStock, casts: settled.casts + 1, lastObservedAt: observedAt,
-      cast: { startedAt: observedAt, biteAt, expiresAt: biteAt + 5_000, species: chooseSpecies(settled, speciesRoll) },
+      cast: { startedAt: observedAt, biteAt, expiresAt: biteAt + hookWindow, species: chooseSpecies(settled, speciesRoll) },
     };
   }
   if (action.type !== 'hook' || state.cast === null) return state;
@@ -193,6 +202,7 @@ export function reduceFishing(state: FishingState, action: FishingAction, now: n
     && locationSpeciesCount({ caught }, unlockedLocations - 1) >= 4) unlockedLocations += 1;
   return {
     ...state, cast: null, caught, totalCaught, inventory, inventoryBonus: Math.min(FISHING_COUNT_LIMIT, state.inventoryBonus + bonus), unlockedLocations,
+    keepsakes: [current.species, ...state.keepsakes.filter((species) => species !== current.species)].slice(0, 3),
     streak, bestStreak: Math.max(state.bestStreak, streak), lastObservedAt: observedAt,
   };
 }
@@ -209,7 +219,9 @@ function integer(value: unknown, max = FISHING_COUNT_LIMIT, min = 0): number {
 }
 
 const LEGACY_KEYS = ['rng', 'coins', 'rod', 'location', 'bait', 'caught', 'totalCaught', 'casts', 'misses', 'streak', 'bestStreak', 'lastObservedAt', 'cast'];
-type LegacyFishingState = Omit<FishingState, 'inventory' | 'inventoryBonus' | 'baitStock' | 'unlockedLocations'>;
+type LegacyFishingState = Omit<FishingState, 'inventory' | 'inventoryBonus' | 'baitStock' | 'unlockedLocations' | 'keepsakes'>;
+type TradeFishingState = Omit<FishingState, 'keepsakes'>;
+const TRADE_KEYS = [...LEGACY_KEYS, 'inventory', 'inventoryBonus', 'baitStock', 'unlockedLocations'];
 
 function parsePreviousFields(data: Record<string, unknown>): LegacyFishingState {
   const rng = integer(data.rng, 4_294_967_295, 1);
@@ -239,8 +251,7 @@ function parsePreviousFields(data: Record<string, unknown>): LegacyFishingState 
   return { rng, coins, rod, location, bait, caught, totalCaught, casts, misses, streak, bestStreak, lastObservedAt, cast };
 }
 
-export function parseFishing(value: unknown): FishingState {
-  const data = record(value, [...LEGACY_KEYS, 'inventory', 'inventoryBonus', 'baitStock', 'unlockedLocations']);
+function parseTradeFields(data: Record<string, unknown>): TradeFishingState {
   const previous = parsePreviousFields(data);
   if (!Array.isArray(data.inventory) || data.inventory.length !== 36 || !Array.isArray(data.baitStock) || data.baitStock.length !== 2) throw new Error('낚시 보관함 또는 미끼 재고의 길이가 올바르지 않습니다.');
   const inventory = Array.from(data.inventory, (count) => integer(count));
@@ -253,9 +264,28 @@ export function parseFishing(value: unknown): FishingState {
   return { ...previous, inventory, inventoryBonus, baitStock, unlockedLocations };
 }
 
+function collectedKeepsakes(caught: number[]): number[] {
+  return caught.flatMap((count, species) => count > 0 ? [species] : []).reverse().slice(0, 3);
+}
+
+export function parseFishing(value: unknown): FishingState {
+  const data = record(value, [...TRADE_KEYS, 'keepsakes']);
+  const previous = parseTradeFields(data);
+  if (!Array.isArray(data.keepsakes) || data.keepsakes.length > 3) throw new Error('물고기 전시 기록의 길이가 올바르지 않습니다.');
+  const keepsakes = Array.from(data.keepsakes, (species) => integer(species, 35));
+  if (new Set(keepsakes).size !== keepsakes.length || keepsakes.some((species) => previous.caught[species] === 0)) throw new Error('물고기 전시 기록이 올바르지 않습니다.');
+  return { ...previous, keepsakes };
+}
+
+/** Existing v6 collection records have no recency order, so seed the display by species index. */
+export function migrateFishingV6(value: unknown): FishingState {
+  const previous = parseTradeFields(record(value, TRADE_KEYS));
+  return { ...previous, keepsakes: collectedKeepsakes(previous.caught) };
+}
+
 /** v5 catches already paid coins, so migration never makes them sellable again. */
 export function migrateFishing(value: unknown): FishingState {
   const previous = parsePreviousFields(record(value, LEGACY_KEYS));
   const unlockedLocations = Math.max(previous.location + 1, LOCATION_REQUIREMENTS.filter((required) => previous.totalCaught >= required).length);
-  return { ...previous, inventory: Array(36).fill(0), inventoryBonus: 0, baitStock: [0, 0], unlockedLocations };
+  return { ...previous, inventory: Array(36).fill(0), inventoryBonus: 0, baitStock: [0, 0], unlockedLocations, keepsakes: collectedKeepsakes(previous.caught) };
 }

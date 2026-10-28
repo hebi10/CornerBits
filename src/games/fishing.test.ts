@@ -3,7 +3,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import {
   baitPackPrice, baitRareChance, fishSalePrice, fishingSaleValue, initialFishing, migrateFishing, parseFishing,
-  reduceFishing, isFishingComplete, isLocationUnlocked, type FishingState,
+  reduceFishing, isFishingComplete, isLocationUnlocked, rodWaitReduction, rodWaitRange, rodBiteWindow, migrateFishingV6, type FishingState,
 } from './fishing';
 import Fishing, { confirmedFishingFeedback } from './Fishing.tsx';
 
@@ -17,6 +17,58 @@ function catchFish(state: FishingState, now: number) {
 }
 
 describe('fishing timing and persistence', () => {
+  it('makes each equipment level reduce the next wait and extend its hook window without rerolling species', () => {
+    const base = cast(initialFishing(), 1_000);
+    for (let rod = 1; rod <= 8; rod += 1) {
+      const upgraded = cast({ ...initialFishing(), rod }, 1_000);
+      expect(rodWaitReduction(rod)).toBe((rod - 1) * 500);
+      expect(rodWaitRange(rod)).toEqual([18_000 - (rod - 1) * 500, 30_000 - (rod - 1) * 500]);
+      expect(rodBiteWindow(rod)).toBe(5_000 + (rod - 1) * 1_000);
+      expect(upgraded.cast!.species).toBe(base.cast!.species);
+      expect(upgraded.rng).toBe(base.rng);
+      expect(upgraded.cast!.biteAt).toBe(base.cast!.biteAt - rodWaitReduction(rod));
+      expect(upgraded.cast!.expiresAt - upgraded.cast!.biteAt).toBe(rodBiteWindow(rod));
+      expect(parseFishing(upgraded)).toEqual(upgraded);
+    }
+    const strong = cast({ ...initialFishing(), rod: 8 }, 1_000);
+    expect(reduceFishing(strong, { type: 'hook' }, strong.cast!.biteAt + 11_999).totalCaught).toBe(1);
+    expect(reduceFishing(strong, { type: 'hook' }, strong.cast!.expiresAt).misses).toBe(1);
+  });
+
+  it('keeps the three most recent distinct caught fish displayed after selling and round trips them', () => {
+    let state = initialFishing();
+    for (const species of [0, 1, 2, 0, 3]) {
+      const waiting = cast(state, state.lastObservedAt + 1_000);
+      waiting.cast!.species = species;
+      state = reduceFishing(waiting, { type: 'hook' }, waiting.cast!.biteAt);
+    }
+    expect(state.keepsakes).toEqual([3, 0, 2]);
+    const sold = reduceFishing(state, { type: 'sell' }, state.lastObservedAt);
+    expect(sold.keepsakes).toEqual([3, 0, 2]);
+    const parsed = parseFishing(sold);
+    expect(parsed).toEqual(sold);
+    expect(parsed.keepsakes).not.toBe(sold.keepsakes);
+    for (const keepsakes of [[3, 3], [3, 0, 2, 1], [35], [-1], [0.5], ['0'], Array(1)]) {
+      expect(() => parseFishing({ ...sold, keepsakes })).toThrow();
+    }
+    expect(() => parseFishing({ ...sold, keepsakes: null })).toThrow();
+  });
+
+  it('preserves every v6 field including an old active cast while rebuilding collected keepsakes', () => {
+    const state = cast({ ...initialFishing(), rod: 8, caught: [1, 0, 2, 0, 1, ...Array(31).fill(0)], totalCaught: 4, casts: 4 }, 1_000);
+    state.cast!.expiresAt = state.cast!.biteAt + 5_000;
+    const { keepsakes: ignored, ...legacy } = state;
+    void ignored;
+    const migrated = migrateFishingV6(legacy);
+    expect(migrated).toMatchObject(legacy);
+    expect(migrated.keepsakes).toEqual([4, 2, 0]);
+    expect(migrated.cast).toEqual(legacy.cast);
+    expect(migrated.rng).toBe(legacy.rng);
+    expect(reduceFishing(migrated, { type: 'hook' }, migrated.cast!.biteAt + 6_000).misses).toBe(1);
+    expect(() => migrateFishingV6(state)).toThrow();
+    expect(() => parseFishing(legacy)).toThrow();
+    expect(parseFishing(migrated)).toEqual(migrated);
+  });
   it('keeps a caught fish in sale inventory without immediately crediting coins', () => {
     const before = { ...initialFishing(), coins: 123 };
     const waiting = cast(before);
@@ -79,6 +131,13 @@ describe('fishing timing and persistence', () => {
     expect(reduceFishing(waiting, { type: 'hook' }, 0).lastObservedAt).toBe(100_000);
     const after = { ...initialFishing(), lastObservedAt: 8_640_000_000_000_000 };
     expect(cast(after, after.lastObservedAt)).toBe(after);
+    const limit = 8_640_000_000_000_000;
+    const lastPossible = limit - rodWaitRange(8)[1] - rodBiteWindow(8);
+    const strong = { ...initialFishing(), rod: 8 };
+    const atBoundary = cast(strong, lastPossible);
+    expect(atBoundary.cast).not.toBeNull();
+    expect(atBoundary.cast!.expiresAt).toBeLessThanOrEqual(limit);
+    expect(cast(strong, lastPossible + 1)).toBe(strong);
   });
 });
 
@@ -291,7 +350,7 @@ describe('permanent fishing regions and v5 preservation', () => {
     const state = initialFishing();
     state.caught[0] = 220; state.totalCaught = 220; state.casts = 220;
     state.coins = 987; state.location = 1; state.bait = 2;
-    const legacy = Object.fromEntries(Object.entries(state).filter(([key]) => !['inventory', 'inventoryBonus', 'baitStock', 'unlockedLocations'].includes(key)));
+    const legacy = Object.fromEntries(Object.entries(state).filter(([key]) => !['inventory', 'inventoryBonus', 'baitStock', 'unlockedLocations', 'keepsakes'].includes(key)));
     const migrated = migrateFishing(legacy);
     expect(migrated.coins).toBe(987);
     expect(migrated.caught).toEqual(state.caught);
@@ -307,7 +366,7 @@ describe('permanent fishing regions and v5 preservation', () => {
 
   it('migrates an active old premium cast without charging or rerolling it', () => {
     const waiting = cast({ ...initialFishing(), bait: 2, baitStock: [0, 1], coins: 456 }, 5_000);
-    const legacy = Object.fromEntries(Object.entries(waiting).filter(([key]) => !['inventory', 'inventoryBonus', 'baitStock', 'unlockedLocations'].includes(key)));
+    const legacy = Object.fromEntries(Object.entries(waiting).filter(([key]) => !['inventory', 'inventoryBonus', 'baitStock', 'unlockedLocations', 'keepsakes'].includes(key)));
     const migrated = migrateFishing(legacy);
     expect(migrated.cast).toEqual(waiting.cast);
     expect(migrated.rng).toBe(waiting.rng);

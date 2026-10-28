@@ -6,9 +6,10 @@ test('one connected angler scene replaces loose ornaments and keeps tools in the
   await saved(page);
   await expect(page.locator('.fishing-play').getByRole('button')).toHaveCount(1);
   await expect(page.locator('.fishing-angler-scene')).toBeVisible();
-  await expect(page.locator('.fishing-keepsakes, .fishing-island')).toHaveCount(0);
+  await expect(page.locator('.fishing-keepsake')).toHaveCount(0);
   await page.getByLabel('낚시 도구와 도감', { exact: true }).click();
-  await expect(page.locator('.fishing-play')).toBeHidden();
+  await expect(page.locator('.fishing-play')).toBeVisible();
+  await page.getByRole('button', { name: '장비', exact: true }).click();
   await expect(page.getByRole('button', { name: /^낚싯대 강화/ })).toBeVisible();
   await expect(page.getByRole('button', { name: /^낚싯대 강화/ })).toBeDisabled();
 });

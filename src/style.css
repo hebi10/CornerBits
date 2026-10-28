@@ -87,3 +87,42 @@ footer { margin-top: 12px; font-size: 10px; color: #595959; line-height: 1.5; }
 .widget-help { padding: 8px; background: rgb(245 245 243 / 96%); }
 .shell-manage .restore-confirm { background: #f5f5f3; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; } }
+
+/* Quiet desktop presentation: status details remain accessible. */
+.brand-mark { display: flex; align-items: center; padding: 0; }
+.brand-mark .game-art { width: 18px; height: 18px; }
+.shell-game .titlebar { height: 22px; flex-basis: 22px; padding: 0 12px; }
+.shell-game .brand-mark { visibility: hidden; }
+.shell-game .brand { cursor: move; }
+.shell-game .window-button { min-width: 22px; min-height: 20px; padding: 0 2px; }
+.shell-game .window-button > .game-art { width: 16px; height: 16px; }
+.shell-game .game-nav { height: 29px; gap: 6px; margin: 0 0 5px 0; }
+.shell-game .game-nav button { width: 28px; height: 28px; }
+.shell-game .game-nav button > .game-art { width: 22px; height: 22px; opacity: .65; }
+.shell-game .game-nav button[aria-pressed="true"] > .game-art { width: 26px; height: 26px; opacity: 1; }
+.shell-game .save-summary { top: 8px; right: 14px; }
+.shell-game .save-state-quiet, .compact .save-state-quiet { display: inline-flex; align-items: center; width: 12px; min-height: 14px; padding: 3px; font-size: 0; }
+.save-state-quiet::after { content: ''; display: block; width: 3px; height: 3px; background: #595959; outline: 1px solid #f5f5f3; }
+.compact .brand-mark .game-art { width: 23px; height: 23px; }
+.compact .window-button > .game-art { width: 19px; height: 19px; }
+.shell-manage .backup-section { min-height: 218px; justify-content: center; gap: 9px; }
+.shell-manage .keepsake-art { width: 88px; height: 88px; }
+.shell-manage .keepsake-caption { font-size: 0; margin: 0; padding: 0; height: 0; }
+.shell-manage .picture-button, .shell-manage .picture-button:disabled { width: 40px; height: 40px; }
+.shell-manage .picture-button > .game-art { width: 36px; height: 36px; }
+.shell-manage .widget-info { margin-top: 6px; }
+.shell-manage .widget-info summary > .game-art { width: 23px; height: 23px; }
+.shell-game footer { font-size: 8px; }
+.shell-game .garden-pots { height: 232px; gap: 5px; }
+.shell-game .garden-pot-art { width: 72px; height: 72px; }
+.shell-game .garden-pots-2 .garden-pot-art { width: 64px; height: 64px; }
+.shell-game .garden-pots-3 .garden-pot-art { width: 52px; height: 52px; }
+.shell-game .garden-pots-4 .garden-pot-art { width: 48px; height: 48px; }
+.shell-game .garden-menu-art { width: 23px; height: 23px; }
+.shell-game .sword-display { height: 226px; }
+.shell-game .sword-blade { width: 148px; height: 148px; }
+.shell-game .sword-stand { width: 86px; height: 34px; left: 52px; }
+.shell-game .sword-polish-hint { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.shell-game .sword-level { top: 12px; font-size: 10px; }
+.shell-game .sword-tool > .game-art, .shell-game .sword-details summary > .game-art { width: 25px; height: 25px; }
+.shell-game .sword-actions { gap: 8px; }

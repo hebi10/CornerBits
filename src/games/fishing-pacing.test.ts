@@ -14,6 +14,7 @@ describe('fishing progression model', () => {
     expect(result.actions.buyBait).toBeGreaterThan(0);
     expect(result.inputSeconds).toBe(Object.values(result.actions).reduce((sum, count) => sum + count, 0));
     expect(result.state.unlockedLocations).toBe(6);
+    expect(result.state.keepsakes).toHaveLength(3);
     expect(result.days).toBeGreaterThanOrEqual(55);
     expect(result.days).toBeLessThanOrEqual(72);
     for (const session of result.sessions) {
@@ -21,6 +22,17 @@ describe('fishing progression model', () => {
       expect(session.inputSeconds + session.waitingSeconds + session.unusedSeconds).toBeCloseTo(session.elapsedSeconds, 6);
     }
     expect(result.state.misses / result.state.casts).toBeCloseTo(0.1, 2);
+  });
+
+  it('settles even the longest upgraded hook windows inside short visits', () => {
+    const result = simulateFishing({ seed: 1, sessionMinutes: 1, maxDays: 2_000 });
+    expect(isFishingComplete(result.state)).toBe(true);
+    expect(result.state.rod).toBe(8);
+    expect(result.state.cast).toBeNull();
+    expect(result.sessions.every((session) => session.elapsedSeconds <= 60)).toBe(true);
+    for (const session of result.sessions) {
+      expect(session.inputSeconds + session.waitingSeconds + session.unusedSeconds).toBeCloseTo(session.elapsedSeconds, 6);
+    }
   });
 
   it('reports the time budget and increased misses without pretending they are measured play times', () => {

@@ -299,6 +299,8 @@ pub struct FishingState {
     #[serde(deserialize_with = "deserialize_integers")]
     pub caught: Vec<u64>,
     #[serde(deserialize_with = "deserialize_integers")]
+    pub keepsakes: Vec<u64>,
+    #[serde(deserialize_with = "deserialize_integers")]
     pub inventory: Vec<u64>,
     #[serde(deserialize_with = "deserialize_integer")]
     pub inventory_bonus: u64,
@@ -331,6 +333,7 @@ impl Default for FishingState {
             location: 0,
             bait: 0,
             caught: vec![0; 36],
+            keepsakes: Vec::new(),
             inventory: vec![0; 36],
             inventory_bonus: 0,
             bait_stock: vec![0; 2],
@@ -355,6 +358,12 @@ impl FishingState {
             || self.bait > 2
             || self.caught.len() != 36
             || !valid_total(&self.caught, self.total_caught)
+            || self.keepsakes.len() > 3
+            || self.keepsakes.iter().enumerate().any(|(index, species)| {
+                *species > 35
+                    || self.caught.get(*species as usize).copied().unwrap_or(0) == 0
+                    || self.keepsakes[..index].contains(species)
+            })
             || self.inventory.len() != 36
             || self
                 .inventory
@@ -439,6 +448,7 @@ pub(crate) struct LegacyFishingState {
 
 impl From<LegacyFishingState> for FishingState {
     fn from(previous: LegacyFishingState) -> Self {
+        let keepsakes = legacy_keepsakes(&previous.caught);
         let unlocked_from_catches = [0, 70, 220, 450, 800, 1200]
             .iter()
             .take_while(|threshold| previous.total_caught >= **threshold)
@@ -450,10 +460,87 @@ impl From<LegacyFishingState> for FishingState {
             location: previous.location,
             bait: previous.bait,
             caught: previous.caught,
+            keepsakes,
             inventory: vec![0; 36],
             inventory_bonus: 0,
             bait_stock: vec![0; 2],
             unlocked_locations: unlocked_from_catches.max(previous.location.saturating_add(1)),
+            total_caught: previous.total_caught,
+            casts: previous.casts,
+            misses: previous.misses,
+            streak: previous.streak,
+            best_streak: previous.best_streak,
+            last_observed_at: previous.last_observed_at,
+            cast: previous.cast,
+        }
+    }
+}
+
+fn legacy_keepsakes(caught: &[u64]) -> Vec<u64> {
+    caught
+        .iter()
+        .enumerate()
+        .rev()
+        .filter_map(|(index, count)| (*count > 0).then_some(index as u64))
+        .take(3)
+        .collect()
+}
+
+// v6 stored trade inventory but had no persistent fish display.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct LegacyFishingV6 {
+    #[serde(deserialize_with = "deserialize_integer")]
+    rng: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    coins: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    rod: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    location: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    bait: u64,
+    #[serde(deserialize_with = "deserialize_integers")]
+    caught: Vec<u64>,
+    #[serde(deserialize_with = "deserialize_integers")]
+    inventory: Vec<u64>,
+    #[serde(deserialize_with = "deserialize_integer")]
+    inventory_bonus: u64,
+    #[serde(deserialize_with = "deserialize_integers")]
+    bait_stock: Vec<u64>,
+    #[serde(deserialize_with = "deserialize_integer")]
+    unlocked_locations: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    total_caught: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    casts: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    misses: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    streak: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    best_streak: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    last_observed_at: u64,
+    #[serde(deserialize_with = "deserialize_cast")]
+    cast: Option<FishingCast>,
+}
+
+impl From<LegacyFishingV6> for FishingState {
+    fn from(previous: LegacyFishingV6) -> Self {
+        let keepsakes = legacy_keepsakes(&previous.caught);
+        Self {
+            rng: previous.rng,
+            coins: previous.coins,
+            rod: previous.rod,
+            location: previous.location,
+            bait: previous.bait,
+            caught: previous.caught,
+            keepsakes,
+            inventory: previous.inventory,
+            inventory_bonus: previous.inventory_bonus,
+            bait_stock: previous.bait_stock,
+            unlocked_locations: previous.unlocked_locations,
             total_caught: previous.total_caught,
             casts: previous.casts,
             misses: previous.misses,

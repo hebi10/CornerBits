@@ -1,20 +1,22 @@
 import { simulateGarden } from './balance-model.ts';
 import { simulateFishing } from './fishing-model.ts';
 import { simulateSwordSeeds } from './sword-model.ts';
+import { rodBiteWindow, rodWaitRange } from '../src/games/fishing.ts';
 const minutes = [10,12.5,15];
 const gardens=minutes.map(sessionMinutes=>simulateGarden({sessionMinutes}));
 const fishing=minutes.map(sessionMinutes=>simulateFishing({sessionMinutes}));
 const sword=simulateSwordSeeds(100,'mixed');
 const round=(n:number)=>Math.round(n*100)/100;
-console.log('CornerBits v0.5.0 진행량 모델 — 실제 사람의 60일 체험이나 일일 제한이 아닙니다.');
+console.log('CornerBits v0.6.0 진행량 모델 — 실제 사람의 60일 체험이나 일일 제한이 아닙니다.');
 console.log('낚시: 하루 한 번, 10% 놓침·보관 후 판매·가능한 강화 우선·반짝 미끼5개 150코인 구매, 부족하면 무료 기본 미끼. 지역마다 미발견 수집, 누적 마릿수와 이전 지역4종으로 영구 개방합니다.');
-console.log('판매·구매·미끼/지역 선택·강화도 입력1초입니다. 37초 이상 남으면 준비하고 준비 후36초 이상일 때 던집니다. 모든 낚시는 방문 안에 정산합니다.');
+console.log('장비마다 입질 대기0.5초 단축·반응 여유1초 증가(1단계18~30초/5초 → 8단계14.5~26.5초/12초). 판매·구매·미끼/지역 선택·강화도 입력1초입니다.');
+console.log('현재 장비의 최대 대기+반응 여유+당기기 입력1초를 예약하고 던집니다. 준비는1초 더 남을 때 시작하고 강화 후 예산을 다시 확인하며, 모든 낚시는 방문 안에 정산합니다.');
 console.log('정원: 하루 한 번, 성공 행동1초·최신 씨앗·가능한 확장. 성장 대기와 오프라인 성장을 포함합니다.');
 console.log('검: 100시드, 성공 행동1초·연마4회 중1회 조준·6단계마다 가능한 안정강화(실패보정30 이상이면 일반) 전략의 중앙값.');
 console.table(minutes.map((m,i)=>({ '하루 게임별 분':m,'낚시 방문 일':fishing[i].days,'정원 방문 일':gardens[i].days,'검 중앙 예상 일':round(sword.medianSeconds/(m*60)) })));
 console.log('하루12.5분 상세 — 입력과 대기를 구분합니다.');
 console.log(JSON.stringify({
- fishing:{goal:1500,days:fishing[1].days,casts:fishing[1].state.casts,misses:fishing[1].state.misses,caught:fishing[1].state.totalCaught,species:fishing[1].state.caught.filter(count=>count>0).length,rod:fishing[1].state.rod,unlockedLocations:fishing[1].state.unlockedLocations,coins:fishing[1].state.coins,actions:fishing[1].actions,inputMinutes:round(fishing[1].inputSeconds/60),biteWaitMinutes:round(fishing[1].waitingSeconds/60),unusedSessionMinutes:round(fishing[1].unusedSeconds/60)},
+ fishing:{goal:1500,days:fishing[1].days,casts:fishing[1].state.casts,misses:fishing[1].state.misses,caught:fishing[1].state.totalCaught,species:fishing[1].state.caught.filter(count=>count>0).length,rod:fishing[1].state.rod,unlockedLocations:fishing[1].state.unlockedLocations,keepsakes:fishing[1].state.keepsakes,coins:fishing[1].state.coins,gear:{initialWaitSeconds:rodWaitRange(1).map(ms=>ms/1000),initialReactionSeconds:rodBiteWindow(1)/1000,finalWaitSeconds:rodWaitRange(8).map(ms=>ms/1000),finalReactionSeconds:rodBiteWindow(8)/1000},actions:fishing[1].actions,inputMinutes:round(fishing[1].inputSeconds/60),biteWaitMinutes:round(fishing[1].waitingSeconds/60),unusedSessionMinutes:round(fishing[1].unusedSeconds/60)},
  garden:{inputMinutes:round(gardens[1].inputSeconds/60),growthWaitMinutes:round(gardens[1].waitingSeconds/60)},
  sword:{medianMinutes:round(sword.medianSeconds/60),tenthPercentileDays:round(sword.tenthPercentileSeconds/750),ninetiethPercentileDays:round(sword.ninetiethPercentileSeconds/750),minimumDays:round(sword.minimumSeconds/750),maximumDays:round(sword.maximumSeconds/750),meanInputMinutes:round(sword.samples.reduce((sum,s)=>sum+s.inputSeconds,0)/sword.samples.length/60),meanCooldownMinutes:round(sword.samples.reduce((sum,s)=>sum+s.cooldownSeconds,0)/sword.samples.length/60)}
 },null,2));

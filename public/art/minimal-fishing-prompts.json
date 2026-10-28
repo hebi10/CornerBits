@@ -1,0 +1,105 @@
+{
+  "tool": "built-in image_gen",
+  "transparent_background": true,
+  "style": "minimal monochrome hard pixel clusters; neutral faces; no large backdrop",
+  "render_alignment": {
+    "boat": {
+      "element_size": 224,
+      "waiting_translate": [
+        19,
+        0
+      ],
+      "bite_translate": [
+        0,
+        28
+      ],
+      "catch_translate": [
+        19,
+        28
+      ]
+    },
+    "fish": {
+      "background_size": "600% 600%",
+      "background_y_percent": [
+        6,
+        24,
+        42,
+        60,
+        80,
+        99
+      ],
+      "background_x_rule": "column / 5 * 100"
+    },
+    "gear": {
+      "background_size": "400% 400%",
+      "background_y_percent": [
+        7.1,
+        40.5
+      ],
+      "background_x_rule": "column / 3 * 100"
+    },
+    "note": "The image generator did not place every row at exact mathematical cell centers. These presentation offsets select complete source sprites without editing or resampling any PNG pixels. Original sources and prompts are retained."
+  },
+  "assets": [
+    {
+      "file": "minimal-angler-scenes.png",
+      "grid": {
+        "columns": 2,
+        "rows": 2
+      },
+      "frames": [
+        "idle",
+        "waiting",
+        "bite",
+        "catch"
+      ],
+      "reference": "public/art/pixel-boat-angler-scenes.png",
+      "source": "C:/Users/박도영/.codex/generated_images/01a1813a-ac02-7391-9bf5-203d2f63e09b/exec-25dc2028-2a93-4a89-bfe5-9184baf77b2e.png",
+      "prompt": "One production-ready transparent PNG pixel sprite sheet for a very minimal monochrome desktop ornament game. Genuine coarse low-resolution square pixel clusters, crisp stair-step edges, flat black, white and at most ONE middle gray. No antialiasing, gradients, texture, 3D shading, glow, soft shadow, cute/chibi styling, expressive faces, text, labels, numbers, frame borders or checkerboard. Transparent pixels everywhere outside the actual sprites. All rows and columns have precise equal square cells and wide enough transparent gutters to prevent neighboring sprites showing. Keep one consistent effective pixel grid, as if each cell were authored on a 64 by 64 pixel grid and nearest-neighbor enlarged. Final canvas must be exactly square; do not trim it. EXACT TWO BY TWO grid, four same-scale poses of one neutral small person sitting INSIDE a shallow wooden rowboat, facing right and fishing. The attached sheet is a composition/reference target; simplify it substantially into very few bold flat pixel clusters with no plank gradients, no detailed clothing, no bench legs. One plain cap, coat silhouette, neutral blank side face, seated torso, shallow boat hull, rod, thin stepped line and small bobber only. Each whole connected scene fills about 80% of its cell's width and 65% of its height, with minimum 8% gutters, no huge inner transparent margins. Use IDENTICAL local anchors in all four cells: cap top at x34% y24%, torso at x36% y43%, boat hull spans x15% to x67% with bottom at y75%; rod handle at x47% y46%, line endpoint near x83%. Top-left IDLE rod slightly angled up; top-right WAITING rod held low with bobber to right; bottom-left BITE rod bends slightly and bobber has only two tiny square ripple accents; bottom-right CATCH rod raised with one small neutral fish hanging right. Do not recenter individual poses. No water plane, shore, grass, dock, oar, props, clouds, stars or other surroundings. Keep person and boat readable at about 140px displayed width. No smiling face or oversized head.",
+      "previous_source": "C:/Users/박도영/.codex/generated_images/01a1813a-ac02-7391-9bf5-203d2f63e09b/exec-138acb91-bd4a-498d-962b-2ecbc56d3028.png",
+      "catch_fish_removal_prompt": "Precise object removal on this exact transparent PNG sprite atlas. Preserve the full EXACT SQUARE canvas, same 2 by 2 equal-cell layout, alpha transparency, every sprite's scale and exact pixel position. Change ONLY the bottom-right CATCH cell: completely REMOVE the one white/gray fish silhouette hanging on the right side of that cell, including its black outline, fins and tail. Leave those removed fish pixels fully TRANSPARENT, not black fill. Keep the thin fishing line above it, ending naturally with a tiny empty line tip where the fish had been attached. Do NOT add a hook, bobber, replacement fish, symbol, glow, or anything else in that cell. Keep the raised rod, raised arm, angler, face, hat, coat and boat unchanged. Keep the OTHER THREE cells completely unchanged, including their bobbers and ripples. Do not recenter, redraw, trim, change palette, move or resize any scene. This atlas will receive a separately drawn species-specific fish in code, so there must be ZERO fish in the bottom-right cell after this edit. Genuine alpha background, coarse monochrome pixel edges remain."
+    },
+    {
+      "file": "minimal-fishing-regions.png",
+      "grid": {
+        "columns": 3,
+        "rows": 3
+      },
+      "used_frames": 6,
+      "frames": [
+        "pebble pond",
+        "reed creek",
+        "moon lake",
+        "shell beach",
+        "fog bay",
+        "star sea"
+      ],
+      "source": "C:/Users/박도영/.codex/generated_images/01a1813a-ac02-7391-9bf5-203d2f63e09b/exec-9f51b666-68a3-4d91-a077-ce199c670fa8.png",
+      "prompt": "One production-ready transparent PNG pixel sprite sheet for a very minimal monochrome desktop ornament game. Genuine coarse low-resolution square pixel clusters, crisp stair-step edges, flat black, white and at most ONE middle gray. No antialiasing, gradients, texture, 3D shading, glow, soft shadow, cute/chibi styling, expressive faces, text, labels, numbers, frame borders or checkerboard. Transparent pixels everywhere outside the actual sprites. All rows and columns have precise equal square cells and wide enough transparent gutters to prevent neighboring sprites showing. Keep one consistent effective pixel grid, as if each cell were authored on a 64 by 64 pixel grid and nearest-neighbor enlarged. Final canvas must be exactly square; do not trim it. EXACT THREE BY THREE grid. Use ONLY cells 0 through 5 in row-major order; cells 6,7,8 on the third row must be completely transparent/empty. The six occupied cells are subtle, sparse fishing-location scenery motifs, all matching one scale and waterline at local y68%. IMPORTANT leave the central area x28..72%, y30..70% fully open/transparent for a separate boat/angler overlay. No boat, human, fish, equipment or building. Sparse only: a few short stepped ripple marks near the waterline, and a small landmark near an outer edge; no filled water surface or large horizontal stripe. Cell0 top-left: pebble pond, two plain angular pebbles at lower-left and three short calm ripple strokes. Cell1 top-middle: reed creek, small straight reed clusters at left and right with a narrow current of a few broken pixels below. Cell2 top-right: moon lake, one small crescent moon at upper-left and one very short moon reflection on the waterline. Cell3 middle-left: shell beach, one tiny shell and small sand clump at lower-right, two short waves. Cell4 middle-middle: fog bay, one small low angular rock on left with TWO short thin horizontal fog wisps higher on the sides, calm water strokes. Cell5 middle-right: star sea, exactly THREE tiny four-point pixel stars near the top outside center, and four broken wave strokes below. Keep these sparse and understated, decoration-like, no full scene backgrounds, no horizon across the whole cell. Each landmark silhouette is small and simple. Make all six regions recognizably different while leaving MOST of every cell genuinely transparent."
+    },
+    {
+      "file": "minimal-fish-collection.png",
+      "grid": {
+        "columns": 6,
+        "rows": 6
+      },
+      "used_frames": 36,
+      "source": "C:/Users/박도영/.codex/generated_images/01a1813a-ac02-7391-9bf5-203d2f63e09b/exec-de45e26b-2986-4651-b12d-46d4e0ef6cb1.png",
+      "original_source": "C:/Users/박도영/.codex/generated_images/01a1813a-ac02-7391-9bf5-203d2f63e09b/exec-1ebd5a1e-222c-40bf-839f-076abb9ff870.png",
+      "prompt": "One production-ready transparent PNG pixel sprite sheet for a very minimal monochrome desktop ornament game. Genuine coarse low-resolution square pixel clusters, crisp stair-step edges, flat black, white and at most ONE middle gray. No antialiasing, gradients, texture, 3D shading, glow, soft shadow, cute/chibi styling, expressive faces, text, labels, numbers, frame borders or checkerboard. Transparent pixels everywhere outside the actual sprites. All rows and columns have precise equal square cells and wide enough transparent gutters to prevent neighboring sprites showing. Keep one consistent effective pixel grid, as if each cell were authored on a 64 by 64 pixel grid and nearest-neighbor enlarged. Final canvas must be exactly square; do not trim it. EXACT SIX BY SIX grid of 36 distinct side-profile aquatic silhouettes in this EXACT row-major order. Each sprite occupies 55-75% cell width/height as needed, centered on identical anchors with at least 12% clear gutters. No duplicates; species vary meaningfully by body shape, fins, tail, stripe/notch pattern. Only black, white and one middle gray in large flat clusters, no shading. Tiny natural single-pixel eyes are permitted, but no smiles or expressive faces. Row1: 0 small crucian carp, 1 slender medaka ricefish, 2 deep-bodied striped bitterling, 3 long thin loach, 4 long koi with two white body patches, 5 fan-tailed goldfish. Row2: 6 slim chub with pointed snout, 7 curved willow minnow, 8 long barb with bottom-facing mouth, 9 long-tailed striped minnow, 10 crescent-backed minnow with tall dorsal fin, 11 trout with few square spots. Row3: 12 narrow icefish, 13 broad dace with dark dorsal band, 14 long predatory chub with forked tail, 15 perch with spiny tall dorsal fin, 16 small sweetfish with arched belly, 17 catfish with long whiskers. Row4: 18 bottom-sitting goby with big blunt head, 19 round inflated pufferfish, 20 mackerel-like horse mackerel with forked tail, 21 compressed diamond filefish, 22 upright seahorse with curled tail, 23 tall butterflyfish with flowing ribbon tail. Row5: 24 torpedo mackerel with square back bars, 25 diamond stingray with long thin tail, 26 octopus with domed head and eight simple curled pixel arms, 27 squid with pointed mantle and dangling tentacles, 28 lionfish with bold radiating spines, 29 small mandarin fish with exaggerated dorsal fin and contrasting large patch. Row6: 30 herring with long ventral keel, 31 flying fish with long wing-like pectoral fins, 32 very tall round ocean sunfish with tiny tail, 33 whale shark with broad head and few white square spots, 34 coelacanth with three-lobed tail, 35 crescent-tail moonfish with tall oval body. Keep this readable as a coherent tiny pixel collection, no water, bubbles, scenery or decorative stars in any cell.",
+      "alignment_edit_prompt": "Edit ONLY the atlas cell alignment and scale of this exact 36-fish sheet. Retain ALL THIRTY-SIX same distinct species in the exact SAME SIX BY SIX row-major order, same coarse monochrome pixel language, no missing or duplicate fish. Final canvas EXACTLY square with six equal columns and six equal rows. Each entire animal including tail, fin, whisker and tentacle MUST fit within the CENTERED 64% of its own square cell's width and height. Leave the outer18% of EVERY side of EVERY cell completely transparent. This is mandatory for CSS sprite clipping: no pixel of one fish may touch another cell. Do not enlarge large species; SHRINK each existing fish into its own cell. Preserve distinctive shapes, order, flat black/white/gray palette, no text, label, scenery or backdrop. Transparent gutters, no checkerboard. Do not trim final square canvas."
+    },
+    {
+      "file": "minimal-fishing-gear.png",
+      "grid": {
+        "columns": 4,
+        "rows": 4
+      },
+      "used_frames": 8,
+      "source": "C:/Users/박도영/.codex/generated_images/01a1813a-ac02-7391-9bf5-203d2f63e09b/exec-b8324371-1808-4a9b-ab97-b4afef0bf3f3.png",
+      "original_source": "C:/Users/박도영/.codex/generated_images/01a1813a-ac02-7391-9bf5-203d2f63e09b/exec-9240e8b0-85f9-4178-aae2-879f0fb7a3fa.png",
+      "prompt": "One production-ready transparent PNG pixel sprite sheet for a very minimal monochrome desktop ornament game. Genuine coarse low-resolution square pixel clusters, crisp stair-step edges, flat black, white and at most ONE middle gray. No antialiasing, gradients, texture, 3D shading, glow, soft shadow, cute/chibi styling, expressive faces, text, labels, numbers, frame borders or checkerboard. Transparent pixels everywhere outside the actual sprites. All rows and columns have precise equal square cells and wide enough transparent gutters to prevent neighboring sprites showing. Keep one consistent effective pixel grid, as if each cell were authored on a 64 by 64 pixel grid and nearest-neighbor enlarged. Final canvas must be exactly square; do not trim it. EXACT FOUR BY FOUR grid. ONLY FIRST EIGHT cells (two top rows) contain distinct fishing rods of progression levels 1 through 8, row-major. Last eight cells completely transparent. Each rod is an isolated small diagonal rod from bottom-left toward top-right, identical overall length, 70% of cell width/height, same endpoints and anchor. Minimal visible square pixel blocks, no fishing line extending outside the main silhouette, no numbers or labels. Cell0: thin basic reed stick with plain handle, no reel. Cell1: cane rod with one wrapped-white handle stripe. Cell2: straight rod with small simple round reel and blunt handle. Cell3: rod with a larger square reel and two white grip bands. Cell4: stiff rod with one strong white tip segment and medium reel. Cell5: rod with twin-ring reel silhouette and white lower grip. Cell6: heavier black rod with white spine stripe, larger cross-shaped reel handle and plain tip. Cell7: highest rod with a stepped double-segment white tip, split grip and distinct spoked square reel. Keep progression in silhouette and flat ink pattern, not glow, magic aura or decorative sparkles. All should feel functional, neutral and very spare. Real transparent background.",
+      "alignment_edit_prompt": "Edit ONLY the atlas cell alignment and scale of this exact eight-rod sheet. Final canvas must be EXACT square with FOUR equal columns and FOUR equal rows. Put the SAME eight distinct rods in the first TWO rows (row-major cells0..7), and leave the lower TWO rows completely transparent. Every rod including tip, handle and reel must fit entirely inside the CENTERED 62% of its own cell's WIDTH AND HEIGHT. Leave the outer19% of EVERY cell side completely transparent. SHRINK the long lower-row rods so no tip or handle leaks into a neighboring row or column. All eight rods must have SAME total visual length and diagonal endpoints, from local x23%,y77% to x77%,y23%; preserve different plain handles/reels/white-band details. Even the first two simple rods need one clear white edge/highlight so they remain readable on both light and dark backgrounds. Very sparse flat black/white/one gray pixel clusters, no gradients, glow, text, labels or background. Do not trim final square canvas."
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 use crate::game_state::{
-    deserialize_integer, CircuitState, Games, GardenState, LegacyFishingState, LegacyGardenState,
-    MineState, SwordState,
+    deserialize_integer, CircuitState, Games, GardenState, LegacyFishingState, LegacyFishingV6,
+    LegacyGardenState, MineState, SwordState,
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -42,7 +42,7 @@ pub struct Backup {
 
 impl AppState {
     pub fn validate(&self) -> Result<(), String> {
-        if self.schema_version != 6 {
+        if self.schema_version != 7 {
             return Err("지원하지 않는 데이터 버전입니다.".into());
         }
         if self.revision > 9_007_199_254_740_991 {
@@ -135,6 +135,28 @@ struct V5State {
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct V6Games {
+    mine: MineState,
+    garden: GardenState,
+    circuit: CircuitState,
+    fishing: LegacyFishingV6,
+    sword: SwordState,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct V6State {
+    #[serde(deserialize_with = "deserialize_integer")]
+    schema_version: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    revision: u64,
+    updated_at: String,
+    settings: Settings,
+    games: V6Games,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct V2State {
     #[serde(deserialize_with = "deserialize_integer")]
     schema_version: u64,
@@ -149,6 +171,7 @@ struct V2State {
 #[serde(untagged)]
 enum StoredState {
     Current(AppState),
+    V6(V6State),
     V5(V5State),
     V4(V4State),
     V3(V3State),
@@ -160,13 +183,34 @@ impl StoredState {
     fn normalize(self) -> Result<(AppState, bool), String> {
         let (state, migrated) = match self {
             Self::Current(state) => (state, false),
+            Self::V6(previous) => {
+                if previous.schema_version != 6 {
+                    return Err("지원하지 않는 데이터 버전입니다.".into());
+                }
+                (
+                    AppState {
+                        schema_version: 7,
+                        revision: previous.revision,
+                        updated_at: previous.updated_at,
+                        settings: previous.settings,
+                        games: Games {
+                            mine: previous.games.mine,
+                            garden: previous.games.garden,
+                            circuit: previous.games.circuit,
+                            fishing: previous.games.fishing.into(),
+                            sword: previous.games.sword,
+                        },
+                    },
+                    true,
+                )
+            }
             Self::V5(previous) => {
                 if previous.schema_version != 5 {
                     return Err("지원하지 않는 데이터 버전입니다.".into());
                 }
                 (
                     AppState {
-                        schema_version: 6,
+                        schema_version: 7,
                         revision: previous.revision,
                         updated_at: previous.updated_at,
                         settings: previous.settings,
@@ -187,7 +231,7 @@ impl StoredState {
                 }
                 (
                     AppState {
-                        schema_version: 6,
+                        schema_version: 7,
                         revision: previous.revision,
                         updated_at: previous.updated_at,
                         settings: previous.settings,
@@ -207,7 +251,7 @@ impl StoredState {
                 }
                 (
                     AppState {
-                        schema_version: 6,
+                        schema_version: 7,
                         revision: previous.revision,
                         updated_at: previous.updated_at,
                         settings: previous.settings,
@@ -227,7 +271,7 @@ impl StoredState {
                 }
                 (
                     AppState {
-                        schema_version: 6,
+                        schema_version: 7,
                         revision: previous.revision,
                         updated_at: previous.updated_at,
                         settings: previous.settings,
@@ -247,7 +291,7 @@ impl StoredState {
                 }
                 (
                     AppState {
-                        schema_version: 6,
+                        schema_version: 7,
                         revision: legacy.revision,
                         updated_at: legacy.updated_at,
                         settings: legacy.settings,
@@ -467,7 +511,7 @@ impl Store {
                 std::process::id(),
                 FILE_SEQUENCE.fetch_add(1, Ordering::Relaxed)
             ));
-            // Preserve the original v1/v2/v3 formatting and bytes before replacing it.
+            // Preserve the original legacy formatting and bytes before replacing it.
             // Any snapshot error returns without touching state.json.
             atomic_write(&snapshot, &bytes)?;
             atomic_write(&path, &state_bytes(&state)?)?;
@@ -589,7 +633,7 @@ mod tests {
 
     fn state(revision: u64) -> AppState {
         AppState {
-            schema_version: 6,
+            schema_version: 7,
             revision,
             updated_at: "2026-10-28T01:00:00.000Z".into(),
             settings: Settings {
@@ -689,23 +733,134 @@ mod tests {
         value
     }
 
+    fn populated_v7() -> serde_json::Value {
+        let mut value = populated_v6();
+        value["schemaVersion"] = serde_json::json!(7);
+        value["games"]["fishing"]["keepsakes"] = serde_json::json!([]);
+        value
+    }
+
     #[test]
-    fn v6_requires_the_trade_contract_and_accepts_initial_empty_stock() {
-        let expected = populated_v6();
+    fn v7_requires_strict_keepsakes_and_preserves_their_display_order() {
+        let mut expected = populated_v7();
+        let mut caught = vec![0; 36];
+        caught[0] = 1;
+        caught[1] = 2;
+        caught[20] = 1;
+        caught[35] = 3;
+        expected["games"]["fishing"]["caught"] = serde_json::json!(caught);
+        expected["games"]["fishing"]["totalCaught"] = serde_json::json!(7);
+        expected["games"]["fishing"]["casts"] = serde_json::json!(7);
+        expected["games"]["fishing"]["keepsakes"] = serde_json::json!([20, 1, 35]);
+        let parsed = parse_backup(&serde_json::to_vec(&backup_value(expected.clone())).unwrap())
+            .expect("schema7 keepsakes should roundtrip");
+        assert_eq!(serde_json::to_value(&parsed.state).unwrap(), expected);
+        for keepsakes in [
+            serde_json::json!([]),
+            serde_json::json!([0]),
+            serde_json::json!([35, 0]),
+            serde_json::json!([0, 1, 35]),
+            serde_json::json!([1.0]),
+        ] {
+            let mut value = expected.clone();
+            value["games"]["fishing"]["keepsakes"] = keepsakes;
+            assert!(parse_backup(&serde_json::to_vec(&backup_value(value)).unwrap()).is_ok());
+        }
+        let directory = tempdir().unwrap();
+        let store = Store::new(directory.path().to_owned());
+        store.save_at(&parsed.state, now(28)).unwrap();
+        let path = directory.path().join("state.json");
+        let original = fs::read(&path).unwrap();
+        for invalid in [
+            serde_json::json!([20, 1, 35, 20]),
+            serde_json::json!([20, 20]),
+            serde_json::json!([2]),
+            serde_json::json!([36]),
+            serde_json::json!([-1]),
+            serde_json::json!([1.5]),
+            serde_json::json!(["1"]),
+            serde_json::json!(null),
+        ] {
+            let mut value = expected.clone();
+            value["games"]["fishing"]["keepsakes"] = invalid;
+            assert!(
+                parse_backup(&serde_json::to_vec(&backup_value(value.clone())).unwrap()).is_err()
+            );
+            if let Ok(state) = serde_json::from_value::<AppState>(value) {
+                assert!(store.save_at(&state, now(28)).is_err());
+                assert!(store.restore_at(&state, now(28)).is_err());
+            }
+        }
+        assert_eq!(fs::read(path).unwrap(), original);
+        assert!(!directory.path().join("snapshots").exists());
+    }
+
+    #[test]
+    fn v6_migration_preserves_every_field_and_snapshots_before_adding_keepsakes() {
+        let fixture = include_bytes!("../../tests/fixtures/phase-six.cornerbits");
+        let backup: serde_json::Value = serde_json::from_slice(fixture).unwrap();
+        let original = serde_json::to_vec_pretty(&backup["state"]).unwrap();
+        let mut expected = backup["state"].clone();
+        expected["schemaVersion"] = serde_json::json!(7);
+        let caught = expected["games"]["fishing"]["caught"].as_array().unwrap();
+        let keepsakes: Vec<_> = caught
+            .iter()
+            .enumerate()
+            .rev()
+            .filter_map(|(index, count)| (count.as_u64().unwrap() > 0).then_some(index))
+            .take(3)
+            .collect();
+        expected["games"]["fishing"]["keepsakes"] = serde_json::json!(keepsakes);
+        let directory = tempdir().unwrap();
+        let store = Store::new(directory.path().to_owned());
+        let path = directory.path().join("state.json");
+        fs::write(&path, &original).unwrap();
+        let migrated = store.load().unwrap().unwrap();
+        assert_eq!(serde_json::to_value(&migrated).unwrap(), expected);
+        let snapshots: Vec<_> = fs::read_dir(directory.path().join("snapshots"))
+            .unwrap()
+            .map(|entry| entry.unwrap().path())
+            .collect();
+        assert_eq!(snapshots.len(), 1);
+        assert_eq!(fs::read(&snapshots[0]).unwrap(), original);
+        assert_eq!(store.load().unwrap().unwrap(), migrated);
+        assert_eq!(
+            fs::read_dir(directory.path().join("snapshots"))
+                .unwrap()
+                .count(),
+            1
+        );
+    }
+
+    #[test]
+    fn v6_keepsake_migration_snapshot_failure_preserves_original_bytes() {
+        let original = serde_json::to_vec_pretty(&populated_v6()).unwrap();
+        let directory = tempdir().unwrap();
+        let path = directory.path().join("state.json");
+        fs::write(&path, &original).unwrap();
+        fs::write(directory.path().join("snapshots"), b"blocked").unwrap();
+        let store = Store::new(directory.path().to_owned());
+        assert!(store.load().is_err());
+        assert_eq!(fs::read(path).unwrap(), original);
+    }
+
+    #[test]
+    fn v7_requires_the_trade_contract_and_accepts_initial_empty_stock() {
+        let expected = populated_v7();
         let parsed =
             parse_backup(&serde_json::to_vec(&backup_value(expected.clone())).unwrap()).unwrap();
         assert_eq!(serde_json::to_value(parsed.state).unwrap(), expected);
     }
 
     fn add_new_games(value: &mut serde_json::Value) {
-        value["schemaVersion"] = serde_json::json!(6);
-        value["games"]["fishing"] = populated_v6()["games"]["fishing"].clone();
-        value["games"]["sword"] = populated_v6()["games"]["sword"].clone();
+        value["schemaVersion"] = serde_json::json!(7);
+        value["games"]["fishing"] = populated_v7()["games"]["fishing"].clone();
+        value["games"]["sword"] = populated_v7()["games"]["sword"].clone();
     }
 
     #[test]
-    fn v6_requires_fishing_and_sword_and_accepts_their_initial_contract() {
-        let good = populated_v6();
+    fn v7_requires_fishing_and_sword_and_accepts_their_initial_contract() {
+        let good = populated_v7();
         let parsed =
             parse_backup(&serde_json::to_vec(&backup_value(good.clone())).unwrap()).unwrap();
         assert_eq!(serde_json::to_value(parsed.state).unwrap(), good);
@@ -717,8 +872,8 @@ mod tests {
     }
 
     #[test]
-    fn v6_sword_polish_cooldown_cannot_exceed_one_interval_from_its_observation() {
-        let good = populated_v6();
+    fn v7_sword_polish_cooldown_cannot_exceed_one_interval_from_its_observation() {
+        let good = populated_v7();
         for (observed, next) in [
             (0_u64, 0_u64),
             (0, 10_000),
@@ -756,8 +911,8 @@ mod tests {
     }
 
     #[test]
-    fn v6_roundtrips_a_pending_cast_and_sword_failure_without_advancing_rng() {
-        let mut expected = populated_v6();
+    fn v7_roundtrips_a_pending_cast_and_sword_failure_without_advancing_rng() {
+        let mut expected = populated_v7();
         let fishing = &mut expected["games"]["fishing"];
         fishing["caught"][0] = serde_json::json!(1);
         fishing["totalCaught"] = serde_json::json!(1);
@@ -793,8 +948,8 @@ mod tests {
     }
 
     #[test]
-    fn v6_rejects_new_game_ranges_relations_and_malformed_casts_without_overwriting() {
-        let good = populated_v6();
+    fn v7_rejects_new_game_ranges_relations_and_malformed_casts_without_overwriting() {
+        let good = populated_v7();
         let directory = tempdir().unwrap();
         let store = Store::new(directory.path().to_owned());
         let state: AppState = serde_json::from_value(good.clone()).unwrap();
@@ -911,11 +1066,12 @@ mod tests {
         let fixture = include_bytes!("../../tests/fixtures/phase-five.cornerbits");
         let previous: serde_json::Value = serde_json::from_slice(fixture).unwrap();
         let mut expected = previous["state"].clone();
-        expected["schemaVersion"] = serde_json::json!(6);
+        expected["schemaVersion"] = serde_json::json!(7);
         expected["games"]["fishing"]["inventory"] = serde_json::json!(vec![0; 36]);
         expected["games"]["fishing"]["inventoryBonus"] = serde_json::json!(0);
         expected["games"]["fishing"]["baitStock"] = serde_json::json!([0, 0]);
         expected["games"]["fishing"]["unlockedLocations"] = serde_json::json!(1);
+        expected["games"]["fishing"]["keepsakes"] = serde_json::json!([]);
         let backup = parse_backup(fixture).unwrap();
         assert_eq!(serde_json::to_value(&backup.state).unwrap(), expected);
         let directory = tempdir().unwrap();
@@ -948,13 +1104,16 @@ mod tests {
     #[test]
     fn shared_v6_reducer_fixture_roundtrips_sales_bait_stock_and_an_active_cast() {
         let fixture = include_bytes!("../../tests/fixtures/phase-six.cornerbits");
-        let expected: serde_json::Value = serde_json::from_slice(fixture).unwrap();
+        let previous: serde_json::Value = serde_json::from_slice(fixture).unwrap();
+        let mut expected = previous.clone();
+        expected["state"]["schemaVersion"] = serde_json::json!(7);
+        expected["state"]["games"]["fishing"]["keepsakes"] = serde_json::json!([3, 2, 1]);
         let backup = parse_backup(fixture).unwrap();
         assert_eq!(
             serde_json::to_value(&backup.state).unwrap(),
             expected["state"]
         );
-        assert_eq!(backup.state.schema_version, 6);
+        assert_eq!(backup.state.schema_version, 7);
         assert_eq!(backup.state.games.fishing.coins, 238);
         assert_eq!(backup.state.games.fishing.total_caught, 7);
         assert_eq!(backup.state.games.fishing.inventory.iter().sum::<u64>(), 1);
@@ -965,11 +1124,17 @@ mod tests {
         let exports = tempdir().unwrap();
         let store = Store::new(directory.path().to_owned());
         let path = directory.path().join("state.json");
-        let original = serde_json::to_vec_pretty(&expected["state"]).unwrap();
+        let original = serde_json::to_vec_pretty(&previous["state"]).unwrap();
         fs::write(&path, &original).unwrap();
         assert_eq!(store.load().unwrap().unwrap(), backup.state);
-        assert_eq!(fs::read(path).unwrap(), original);
-        assert!(!directory.path().join("snapshots").exists());
+        assert_ne!(fs::read(path).unwrap(), original);
+        let snapshot = fs::read_dir(directory.path().join("snapshots"))
+            .unwrap()
+            .next()
+            .unwrap()
+            .unwrap()
+            .path();
+        assert_eq!(fs::read(snapshot).unwrap(), original);
         let exported = exports.path().join("shared-v6.cornerbits");
         store.export_to(&exported, now(28)).unwrap();
         assert_eq!(
@@ -978,6 +1143,68 @@ mod tests {
         );
         store.restore_at(&backup.state, now(29)).unwrap();
         assert_eq!(store.load().unwrap().unwrap(), backup.state);
+    }
+
+    #[test]
+    fn shared_v7_reducer_fixture_roundtrips_keepsakes_gear_and_pending_cast_exactly() {
+        let fixture = include_bytes!("../../tests/fixtures/phase-seven.cornerbits");
+        let expected: serde_json::Value = serde_json::from_slice(fixture).unwrap();
+        let backup = parse_backup(fixture).unwrap();
+        assert_eq!(
+            serde_json::to_value(&backup.state).unwrap(),
+            expected["state"]
+        );
+        let fishing = &backup.state.games.fishing;
+        assert_eq!(fishing.keepsakes, vec![1, 5, 4]);
+        assert_eq!(fishing.rod, 2);
+        assert_eq!(fishing.coins, 880);
+        assert_eq!(fishing.total_caught, 26);
+        assert_eq!(fishing.inventory.iter().sum::<u64>(), 1);
+        assert_eq!(fishing.inventory_bonus, 12);
+        assert_eq!(fishing.bait_stock, vec![3, 0]);
+        let cast = fishing.cast.as_ref().unwrap();
+        assert_eq!(cast.expires_at - cast.bite_at, 6000);
+        let directory = tempdir().unwrap();
+        let exports = tempdir().unwrap();
+        let store = Store::new(directory.path().to_owned());
+        let path = directory.path().join("state.json");
+        let original = serde_json::to_vec_pretty(&expected["state"]).unwrap();
+        fs::write(&path, &original).unwrap();
+        assert_eq!(store.load().unwrap().unwrap(), backup.state);
+        assert_eq!(fs::read(&path).unwrap(), original);
+        assert!(!directory.path().join("snapshots").exists());
+
+        for keepsakes in [serde_json::json!([1, 1]), serde_json::json!([35])] {
+            let mut invalid = expected["state"].clone();
+            invalid["games"]["fishing"]["keepsakes"] = keepsakes;
+            assert!(
+                parse_backup(&serde_json::to_vec(&backup_value(invalid.clone())).unwrap()).is_err()
+            );
+            let invalid: AppState = serde_json::from_value(invalid).unwrap();
+            assert!(store.save_at(&invalid, now(28)).is_err());
+            assert!(store.restore_at(&invalid, now(28)).is_err());
+        }
+        assert_eq!(fs::read(&path).unwrap(), original);
+        assert!(!directory.path().join("snapshots").exists());
+
+        let exported = exports.path().join("shared-v7.cornerbits");
+        store.export_to(&exported, now(28)).unwrap();
+        assert_eq!(
+            parse_backup(&fs::read(exported).unwrap()).unwrap().state,
+            backup.state
+        );
+        store.restore_at(&backup.state, now(29)).unwrap();
+        assert_eq!(store.load().unwrap().unwrap(), backup.state);
+        let snapshot = fs::read_dir(directory.path().join("snapshots"))
+            .unwrap()
+            .next()
+            .unwrap()
+            .unwrap()
+            .path();
+        assert_eq!(
+            parse_backup(&fs::read(snapshot).unwrap()).unwrap().state,
+            backup.state
+        );
     }
 
     #[test]
@@ -1027,6 +1254,7 @@ mod tests {
                 "inventoryBonus",
                 "baitStock",
                 "unlockedLocations",
+                "keepsakes",
             ] {
                 fishing.remove(key);
             }
@@ -1068,8 +1296,8 @@ mod tests {
     }
 
     #[test]
-    fn v6_trade_stock_bonus_and_region_relations_reject_without_overwriting() {
-        let good = populated_v6();
+    fn v7_trade_stock_bonus_and_region_relations_reject_without_overwriting() {
+        let good = populated_v7();
         let directory = tempdir().unwrap();
         let store = Store::new(directory.path().to_owned());
         store
@@ -1126,7 +1354,7 @@ mod tests {
     }
 
     #[test]
-    fn v6_sale_bonus_boundaries_and_large_stock_do_not_overflow() {
+    fn v7_sale_bonus_boundaries_and_large_stock_do_not_overflow() {
         for (species, count, bonus, valid) in [
             (0, 1_u64, 6_u64, true),
             (0, 1, 7, false),
@@ -1136,7 +1364,7 @@ mod tests {
             (35, 1, 57, false),
             (35, 1_000_000_000_000, 1_000_000_000_000, true),
         ] {
-            let mut value = populated_v6();
+            let mut value = populated_v7();
             let fishing = &mut value["games"]["fishing"];
             fishing["caught"][species] = serde_json::json!(count);
             fishing["inventory"][species] = serde_json::json!(count);
@@ -1155,8 +1383,8 @@ mod tests {
     }
 
     #[test]
-    fn v6_roundtrips_unsold_fish_bait_and_permanent_regions_during_a_cast() {
-        let mut expected = populated_v6();
+    fn v7_roundtrips_unsold_fish_bait_and_permanent_regions_during_a_cast() {
+        let mut expected = populated_v7();
         let fishing = &mut expected["games"]["fishing"];
         fishing["rng"] = serde_json::json!(987654321);
         fishing["coins"] = serde_json::json!(300);
@@ -1196,8 +1424,8 @@ mod tests {
     }
 
     #[test]
-    fn v6_requires_permanent_unlock_count_but_preserves_independent_unlock_history() {
-        let good = populated_v6();
+    fn v7_requires_permanent_unlock_count_but_preserves_independent_unlock_history() {
+        let good = populated_v7();
         for count in [1, 40] {
             let mut value = good.clone();
             value["games"]["garden"]["unlockedSpecies"] = serde_json::json!(count);
@@ -1303,7 +1531,7 @@ mod tests {
         let mut expected: serde_json::Value = serde_json::from_slice(fixture).unwrap();
         add_new_games(&mut expected["state"]);
         let backup = parse_backup(fixture).unwrap();
-        assert_eq!(backup.state.schema_version, 6);
+        assert_eq!(backup.state.schema_version, 7);
         assert_eq!(backup.state.games.garden.unlocked_species, 1);
         assert_eq!(
             serde_json::to_value(&backup.state).unwrap(),
@@ -1344,7 +1572,7 @@ mod tests {
         fs::write(&path, &original).unwrap();
         let migrated = store.load().unwrap().unwrap();
         let value = serde_json::to_value(&migrated).unwrap();
-        assert_eq!(value["schemaVersion"], 6);
+        assert_eq!(value["schemaVersion"], 7);
         for key in ["revision", "updatedAt", "settings"] {
             assert_eq!(value[key], legacy[key]);
         }
@@ -1390,11 +1618,11 @@ mod tests {
     }
 
     #[test]
-    fn v6_roundtrips_all_populated_games_through_save_export_and_restore() {
+    fn v7_roundtrips_all_populated_games_through_save_export_and_restore() {
         let directory = tempdir().unwrap();
         let export_directory = tempdir().unwrap();
         let store = Store::new(directory.path().to_owned());
-        let expected = populated_v6();
+        let expected = populated_v7();
         let populated: AppState = serde_json::from_value(expected.clone()).unwrap();
         populated.validate().unwrap();
         store.save_at(&populated, now(28)).unwrap();
@@ -1411,8 +1639,8 @@ mod tests {
     }
 
     #[test]
-    fn v6_validates_circuit_boundaries_and_contiguous_records() {
-        let good = populated_v6();
+    fn v7_validates_circuit_boundaries_and_contiguous_records() {
+        let good = populated_v7();
         let directory = tempdir().unwrap();
         let store = Store::new(directory.path().to_owned());
         let state: AppState = serde_json::from_value(good.clone()).unwrap();
@@ -1495,7 +1723,7 @@ mod tests {
         assert_eq!(read_backup_file(&input).unwrap(), original);
         let populated = parse_backup(original.as_bytes()).unwrap().state;
         let normalized = serde_json::to_value(&populated).unwrap();
-        assert_eq!(normalized["schemaVersion"], 6);
+        assert_eq!(normalized["schemaVersion"], 7);
         assert_eq!(normalized["games"]["mine"], populated_v2()["games"]["mine"]);
         let mut expected_garden = populated_v2()["games"]["garden"].clone();
         expected_garden["unlockedSpecies"] = serde_json::json!(40);
@@ -1525,7 +1753,7 @@ mod tests {
             "turns": 0, "records": vec![0; 300], "totalClears": 0
         });
         let backup = parse_backup(fixture).unwrap();
-        assert_eq!(backup.state.schema_version, 6);
+        assert_eq!(backup.state.schema_version, 7);
         assert_eq!(backup.state.revision, 17);
         assert_eq!(backup.state.games.mine.total_mined, 1);
         assert_eq!(backup.state.games.mine.inventory[0], 1);
@@ -1562,7 +1790,7 @@ mod tests {
         add_new_games(&mut expected["state"]);
         expected["state"]["games"]["garden"]["unlockedSpecies"] = serde_json::json!(1);
         let backup = parse_backup(fixture).unwrap();
-        assert_eq!(backup.state.schema_version, 6);
+        assert_eq!(backup.state.schema_version, 7);
         assert_eq!(backup.state.games.mine.total_mined, 1);
         assert_eq!(backup.state.games.garden.total_harvests, 1);
         assert_eq!(backup.state.games.circuit.stage, 151);
@@ -1598,7 +1826,7 @@ mod tests {
         let path = directory.path().join("state.json");
         fs::write(&path, legacy_bytes()).unwrap();
         let migrated = store.load().unwrap().unwrap();
-        assert_eq!(migrated.schema_version, 6);
+        assert_eq!(migrated.schema_version, 7);
         assert_eq!(migrated.revision, 7);
         assert_eq!(migrated.updated_at, "2026-10-28T01:00:00.000Z");
         assert!(migrated.settings.always_on_top && migrated.settings.compact);
@@ -1666,14 +1894,14 @@ mod tests {
         fs::write(&input, &original).unwrap();
         assert_eq!(read_backup_file(&input).unwrap(), original);
         let normalized = parse_backup(original.as_bytes()).unwrap();
-        assert_eq!(normalized.state.schema_version, 6);
+        assert_eq!(normalized.state.schema_version, 7);
         store.restore_at(&normalized.state, now(28)).unwrap();
         let output = export_directory.path().join("normalized.cornerbits");
         store.export_to(&output, now(28)).unwrap();
         let exported: serde_json::Value =
             serde_json::from_slice(&fs::read(output).unwrap()).unwrap();
         assert_eq!(exported["backupVersion"], 1);
-        assert_eq!(exported["state"]["schemaVersion"], 6);
+        assert_eq!(exported["state"]["schemaVersion"], 7);
         assert_eq!(exported["state"]["games"]["mine"]["depth"], 1);
         assert_eq!(exported["state"]["games"]["circuit"]["stage"], 1);
     }
@@ -1691,7 +1919,7 @@ mod tests {
                 .unwrap()
                 .state
                 .schema_version,
-            6
+            7
         );
         let snapshot = fs::read_dir(directory.path().join("snapshots"))
             .unwrap()
@@ -1706,13 +1934,13 @@ mod tests {
     fn v4_rejects_invalid_game_fields_and_preserves_existing_state() {
         let directory = tempdir().unwrap();
         let store = Store::new(directory.path().to_owned());
-        let good = populated_v6();
+        let good = populated_v7();
         let validated: AppState = serde_json::from_value(good.clone()).unwrap();
         validated.validate().unwrap();
         store.save_at(&validated, now(28)).unwrap();
         let before = fs::read(directory.path().join("state.json")).unwrap();
         let cases = [
-            ("/schemaVersion", serde_json::json!(7)),
+            ("/schemaVersion", serde_json::json!(8)),
             ("/revision", serde_json::json!(9007199254740992_u64)),
             ("/games/mine/depth", serde_json::json!(0)),
             ("/games/mine/depth", serde_json::json!(1000001)),
@@ -1783,6 +2011,7 @@ mod tests {
             populated_v4(),
             populated_v5(),
             populated_v6(),
+            populated_v7(),
         ] {
             let mut pointers = vec![
                 "",
@@ -1845,8 +2074,9 @@ mod tests {
             (4, populated_v4()),
             (5, populated_v5()),
             (6, populated_v6()),
+            (7, populated_v7()),
         ] {
-            for version in [0, 1, 2, 3, 4, 5, 6, 7] {
+            for version in [0, 1, 2, 3, 4, 5, 6, 7, 8] {
                 if version == expected_version {
                     continue;
                 }
@@ -1909,13 +2139,14 @@ mod tests {
     }
 
     #[test]
-    fn only_exact_legacy_state_is_migrated_and_ipc_requires_v6() {
+    fn only_exact_legacy_state_is_migrated_and_ipc_requires_v7() {
         let legacy: serde_json::Value = serde_json::from_slice(legacy_bytes()).unwrap();
         assert!(serde_json::from_value::<AppState>(legacy.clone()).is_err());
         assert!(serde_json::from_value::<AppState>(populated_v2()).is_err());
         assert!(serde_json::from_value::<AppState>(populated_v3()).is_err());
         assert!(serde_json::from_value::<AppState>(populated_v4()).is_err());
         assert!(serde_json::from_value::<AppState>(populated_v5()).is_err());
+        assert!(serde_json::from_value::<AppState>(populated_v6()).is_err());
         for pointer in ["", "/settings"] {
             let fields: Vec<String> = legacy
                 .pointer(pointer)
@@ -1944,7 +2175,7 @@ mod tests {
                 .insert("unexpected".into(), serde_json::json!(true));
             assert!(parse_backup(&serde_json::to_vec(&backup_value(value)).unwrap()).is_err());
         }
-        let mut disguised = populated_v6();
+        let mut disguised = populated_v7();
         disguised["schemaVersion"] = serde_json::json!(1);
         let state: AppState = serde_json::from_value(disguised.clone()).unwrap();
         assert!(state.validate().is_err());
@@ -1953,7 +2184,7 @@ mod tests {
 
     #[test]
     fn v4_accepts_documented_numeric_and_collection_boundaries() {
-        let mut value = populated_v6();
+        let mut value = populated_v7();
         value["revision"] = serde_json::json!(9007199254740991_u64);
         value["games"]["mine"]["depth"] = serde_json::json!(1000000);
         value["games"]["mine"]["pickaxe"] = serde_json::json!(10);
@@ -1989,7 +2220,7 @@ mod tests {
 
     #[test]
     fn v4_rejects_sum_overflow_and_accepts_integral_json_numbers() {
-        let good = populated_v6();
+        let good = populated_v7();
         for game in ["mine", "garden"] {
             let mut value = good.clone();
             let (counts, total) = if game == "mine" {
@@ -2015,9 +2246,9 @@ mod tests {
     #[test]
     fn rejects_future_schema_invalid_timestamp_and_unsafe_revision() {
         let mut value = state(0);
-        value.schema_version = 7;
+        value.schema_version = 8;
         assert!(value.validate().is_err());
-        value.schema_version = 6;
+        value.schema_version = 7;
         value.updated_at = "2026-02-31T12:00:00Z".into();
         assert!(value.validate().is_err());
         value.updated_at = "2026-10-28T01:00:00Z".into();

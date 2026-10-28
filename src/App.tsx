@@ -30,7 +30,7 @@ export default function App() {
   const [error, setError] = useState('');
   const [note, setNote] = useState('');
   const [pendingBackup, setPendingBackup] = useState<AppState | null>(null);
-  const [backupSchema, setBackupSchema] = useState(6);
+  const [backupSchema, setBackupSchema] = useState(7);
   const [screen, setScreen] = useState<'fishing' | 'garden' | 'sword' | 'manage'>('fishing');
   const [visible, setVisible] = useState(() => !document.hidden);
   const [saveFailed, setSaveFailed] = useState(false);
@@ -220,10 +220,10 @@ export default function App() {
   return (
     <div className={`shell${compact ? ' compact' : ` shell-game${screen === 'manage' ? ' shell-manage' : ''}`}${!visible ? ' motion-paused' : ''}`}>
       <header className="titlebar">
-        <span className="brand" data-tauri-drag-region><span data-tauri-drag-region>CornerBits</span></span>
-        {compact && <span className="compact-status" role="status" aria-live="polite">{saveStatus}</span>}
+        <span className="brand" data-tauri-drag-region title="제목 영역을 끌어 위젯 이동"><span className="brand-mark" data-tauri-drag-region><Sprite atlas="fishing" frame={0}/></span><span className="brand-name sr-only" data-tauri-drag-region>CornerBits</span></span>
+        {compact && <span className={`compact-status${saveStatus === '저장 완료' ? ' save-state-quiet' : ''}`} role="status" aria-live="polite" title={saveStatus}>{saveStatus}</span>}
         <div className="window-actions">
-          <button className="window-button" type="button" title={compact ? '펼치기' : '막대로 축소'} aria-label={compact ? '펼치기' : '막대로 축소'} disabled={!ready || !state || busy || !!pendingBackup} onClick={() => void runOperation(() => changeSetting('compact', !compact))}>{compact ? '펼침' : <Sprite atlas="charms" frame={15} />}</button>
+          <button className="window-button" type="button" title={compact ? '펼치기' : '막대로 축소'} aria-label={compact ? '펼치기' : '막대로 축소'} disabled={!ready || !state || busy || !!pendingBackup} onClick={() => void runOperation(() => changeSetting('compact', !compact))}><Sprite atlas="charms" frame={15} /></button>
           {platform.desktop && <button className="window-button" aria-label="종료" onClick={() => void platform.closeWindow().catch((cause) => setError(errorMessage(cause)))}>×</button>}
         </div>
       </header>
@@ -235,7 +235,7 @@ export default function App() {
           <button type="button" aria-label="관리" title="기록 보관함" aria-pressed={screen === 'manage'} disabled={busy || !!pendingBackup} onClick={() => setScreen('manage')}><Sprite atlas="charms" frame={4} /></button>
         </nav>
         <section className="save-summary" aria-label="저장 상태">
-          <span className="save-state" role="status" aria-live="polite" title={state ? `마지막 저장 ${dateLabel(state.updatedAt)}` : undefined}>{saveStatus}</span>
+          <span className={`save-state${saveStatus === '저장 완료' ? ' save-state-quiet' : ''}`} role="status" aria-live="polite" title={state ? `${saveStatus} · ${dateLabel(state.updatedAt)}` : saveStatus}>{saveStatus}</span>
           {screen === 'manage' && <span className="saved-time">{state ? dateLabel(state.updatedAt) : '기록 확인 중'}</span>}
         </section>
         {(error || saveFailed) && <div className="message error" role="alert">{error || '자동 저장에 실패했습니다. 다시 시도해 주세요.'}{saveFailed && <button type="button" disabled={busy} onClick={() => void runOperation(retrySave)}>저장 다시 시도</button>}</div>}
@@ -269,9 +269,9 @@ export default function App() {
           <div className="widget-help">
             <p className="section-label">바탕화면 위젯</p>
             <p className="description">물고기·화분·검 그림으로 세 게임을 바꿉니다. 그림에 마우스를 두면 설명이 나타납니다.</p>
-            <p className="description">위쪽 제목을 끌어 위치를 옮기세요. 트레이의 ‘위젯 찾기’로 다시 볼 수 있습니다.</p>
+            <p className="description">위쪽 여백을 끌어 위치를 옮기세요. 트레이의 ‘위젯 찾기’로 다시 볼 수 있습니다.</p>
             <p className="description">위쪽 화살표 상자는 백업 내보내기, 아래쪽 화살표 상자는 복원입니다. 세 게임의 진행도·도감·재화·설정을 함께 보관합니다.</p>
-            <span className="version">v0.5.0</span>
+            <span className="version">v0.6.0</span>
           </div>
         </details>
         {pendingBackup && <section className="restore-confirm" aria-label="복원 확인">
@@ -279,6 +279,7 @@ export default function App() {
           <p>{backupSchema === 1 ? '1단계 설정 백업입니다. 복원하면 세 게임 진행도가 처음 상태로 바뀝니다.' : `낚시 ${pendingBackup.games.fishing.totalCaught}마리 · 낚싯대 ${pendingBackup.games.fishing.rod}/8 / 정원 수확 ${pendingBackup.games.garden.totalHarvests}회 · 화분 ${pendingBackup.games.garden.pots.length}개 / 검 +${pendingBackup.games.sword.level}`}</p>
           {backupSchema > 1 && backupSchema < 5 && <p>이전 게임 구성의 백업입니다. 정원과 광산·회로 기록은 보존하고, 낚시와 검 키우기는 처음 상태로 복원합니다.</p>}
           {backupSchema === 5 && <p>판매 기능 이전 백업입니다. 기존 코인·도감은 유지하고 판매 재고·미끼 재고는0으로 시작합니다. 이미 정산된 물고기를 다시 지급하지 않습니다.</p>}
+          {backupSchema === 6 && <p>전시 기능 이전 백업입니다. 기존 기록을 유지하고 수집한 어종으로 전시를 구성합니다.</p>}
           <div className="confirm-actions"><button type="button" className="primary" disabled={busy} onClick={() => void runOperation(confirmRestore)}>이 백업으로 복원</button><button type="button" disabled={busy} onClick={() => setPendingBackup(null)}>취소</button></div>
         </section>}
         </>}

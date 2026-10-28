@@ -30,9 +30,9 @@ test('a fourth local species and the catch threshold permanently open the next l
   const now=await page.evaluate(()=>Date.now());
   state.games.fishing={...state.games.fishing,caught:[67,1,1,0,...Array(32).fill(0)],totalCaught:69,casts:70,lastObservedAt:now,cast:{startedAt:now,biteAt:now+18000,expiresAt:now+23000,species:3}};
   await page.evaluate(value=>localStorage.setItem('cornerbits.preview.state',JSON.stringify(value)),state);await page.reload();await saved(page);
-  await page.getByLabel('낚시 도구와 도감',{exact:true}).click();await expect(page.getByLabel('낚시터 고르기').locator('option[value="1"]')).toBeDisabled();await page.getByLabel('낚시 도구와 도감',{exact:true}).click();
+  await page.getByLabel('낚시 도구와 도감',{exact:true}).click();await page.getByRole('button',{name:'지역',exact:true}).click();await expect(page.getByLabel('낚시터 고르기').locator('option[value="1"]')).toBeDisabled();await page.getByLabel('낚시 도구와 도감',{exact:true}).click();
   await page.clock.fastForward(18500);await page.getByRole('button',{name:/낚싯줄 당기기, 입질 중/}).click();expect((await saved(page)).games.fishing.unlockedLocations).toBe(2);
-  await page.getByLabel('낚시 도구와 도감',{exact:true}).click();const location=page.getByLabel('낚시터 고르기');await location.selectOption('1');await saved(page);await location.selectOption('0');await saved(page);await location.selectOption('1');await saved(page);
+  await page.getByLabel('낚시 도구와 도감',{exact:true}).click();await page.getByRole('button',{name:'지역',exact:true}).click();const location=page.getByLabel('낚시터 고르기');await location.selectOption('1');await saved(page);await location.selectOption('0');await saved(page);await location.selectOption('1');await saved(page);
   await page.reload();expect((await saved(page)).games.fishing).toMatchObject({location:1,unlockedLocations:2});
 });
 
@@ -40,7 +40,7 @@ test('an empty paid bait selection can switch to the free bait without losing pr
   await page.goto('/');const state=await saved(page);state.games.fishing.bait=1;
   await page.evaluate(value=>localStorage.setItem('cornerbits.preview.state',JSON.stringify(value)),state);await page.reload();await saved(page);
   await expect(page.getByRole('button',{name:'낚싯대 던지기',exact:true})).toBeDisabled();await expect(page.getByText('미끼 없음 · 도구에서 구매 또는 기본 미끼 선택')).toBeVisible();
-  await page.getByLabel('낚시 도구와 도감',{exact:true}).click();await page.getByLabel('미끼 고르기').selectOption('0');await saved(page);await page.getByLabel('낚시 도구와 도감',{exact:true}).click();
+  await page.getByLabel('낚시 도구와 도감',{exact:true}).click();await page.getByRole('button',{name:'장비',exact:true}).click();await page.getByLabel('미끼 고르기').selectOption('0');await saved(page);await page.getByLabel('낚시 도구와 도감',{exact:true}).click();
   await expect(page.getByRole('button',{name:'낚싯대 던지기',exact:true})).toBeEnabled();
 });
 
@@ -63,6 +63,6 @@ for(const result of ['catch','miss'] as const)test(`the last paid bait ${result}
   expect(result==='catch'?fishing.totalCaught:fishing.misses).toBe(1);
   await expect(page.getByRole('button',{name:'낚싯대 던지기',exact:true})).toBeDisabled();
   await expect(page.locator('.fishing-status')).toContainText('미끼 없음 · 도구에서 구매 또는 기본 미끼 선택');
-  await page.getByLabel('낚시 도구와 도감',{exact:true}).click();await page.getByLabel('미끼 고르기').selectOption('0');await saved(page);await page.getByLabel('낚시 도구와 도감',{exact:true}).click();
+  await page.getByLabel('낚시 도구와 도감',{exact:true}).click();await page.getByRole('button',{name:'장비',exact:true}).click();await page.getByLabel('미끼 고르기').selectOption('0');await saved(page);await page.getByLabel('낚시 도구와 도감',{exact:true}).click();
   await expect(page.getByRole('button',{name:'낚싯대 던지기',exact:true})).toBeEnabled();
 });
