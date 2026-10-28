@@ -121,3 +121,30 @@ test('twelve mature pots fit the widget and respect reduced motion', async ({ pa
   await expect(art).toHaveCSS('animation-name', 'none');
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(280);
 });
+
+test('games expose the wallpaper while management and error messages stay readable', async ({ page }) => {
+  await page.goto('/');
+  await saved(page);
+  await expect(page.locator('.shell')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  await expect(page.locator('.mine-grid')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  await expect(page.locator('.mine-grid')).toHaveCSS('border-top-width', '0px');
+  for (const wallpaper of ['#202328', '#e5e5e5']) {
+    await page.evaluate((color) => { document.documentElement.style.backgroundColor = color; }, wallpaper);
+    await expect(page.getByRole('button', { name: '관리', exact: true })).toBeVisible();
+    await expect(page.locator('.save-state')).toHaveCSS('background-color', 'rgba(245, 245, 243, 0.88)');
+  }
+  await page.getByRole('button', { name: '관리', exact: true }).click();
+  await expect(page.locator('.shell')).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  await expect(page.getByRole('button', { name: '백업 내보내기' })).toBeEnabled();
+  await page.getByRole('button', { name: '광산', exact: true }).click();
+  await page.evaluate(() => {
+    const setItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (key, value) {
+      if (key === 'cornerbits.preview.state') throw new Error('test disk full');
+      setItem.call(this, key, value);
+    };
+  });
+  await page.getByRole('button', { name: /^1번.*내구도/ }).click();
+  await expect(page.getByRole('alert')).toHaveCSS('background-color', 'rgb(245, 245, 243)');
+  await expect(page.getByRole('button', { name: '저장 다시 시도' })).toBeVisible();
+});

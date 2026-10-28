@@ -1,15 +1,16 @@
 .mine-game { min-width: 0; }
-.mine-heading { display: flex; align-items: center; gap: 7px; height: 30px; font-variant-numeric: tabular-nums; }
-.mine-depth { display: flex; align-items: center; gap: 2px; flex: 1; font-size: 17px; }
+.mine-heading { display: flex; align-items: center; gap: 5px; height: 22px; font-variant-numeric: tabular-nums; }
+.mine-depth { display: flex; align-items: center; gap: 2px; flex: 1; font-size: 11px; }
 .mine-depth small { margin-left: 2px; font-size: 10px; color: #595959; }
-.mine-cart { width: 33px; height: 29px; }
-.mine-coins { display: flex; align-items: center; gap: 3px; font-size: 11px; }
-.mine-coins > .game-art { width: 22px; height: 22px; }
-.mine-lantern { width: 26px; height: 28px; transform-origin: 50% 12%; animation: mine-lantern-sway 5s ease-in-out infinite; }
-.mine-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; padding: 3px; border: 1px solid #bdbdb8; background: #e3e3df; margin-top: 3px; }
-.mine-tile { position: relative; display: flex; justify-content: center; align-items: center; min-width: 0; min-height: 32px; height: 32px; padding: 0; border: 0; background: transparent; touch-action: manipulation; }
+.mine-depth > span:last-child, .mine-coins > span:last-child { padding: 1px 3px; background: rgb(248 248 246 / 88%); }
+.mine-cart { width: 26px; height: 22px; }
+.mine-coins { display: flex; align-items: center; gap: 2px; font-size: 10px; }
+.mine-coins > .game-art { width: 19px; height: 19px; }
+.mine-lantern { width: 23px; height: 24px; transform-origin: 50% 12%; animation: mine-lantern-sway 5s ease-in-out infinite; }
+.mine-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1px; margin-top: 2px; }
+.mine-tile { position: relative; display: flex; justify-content: center; align-items: center; min-width: 0; min-height: 40px; height: 40px; padding: 0; border: 0; background: transparent; touch-action: manipulation; }
 .mine-tile:disabled { background: transparent; }
-.mine-rock { width: 36px; height: 36px; pointer-events: none; }
+.mine-rock { width: 46px; height: 46px; pointer-events: none; }
 .mine-tile.mined .mine-rock { opacity: .65; }
 .mine-durability { position: absolute; bottom: 1px; left: 30%; width: 40%; height: 2px; background: #c2c2bc; pointer-events: none; }
 .mine-durability::after { content: ''; display: block; height: 100%; width: var(--remaining-hp); background: #595959; }
@@ -17,17 +18,20 @@
 .mine-feedback-art { width: 29px; height: 29px; }
 .mine-feedback.strike .mine-feedback-art { transform-origin: 80% 85%; animation: mine-pick-strike 230ms ease-out both; }
 .mine-feedback.loot { animation: mine-loot-rise 650ms ease-out both; }
-.mine-feedback.loot > span:not(.game-art) { font-size: 10px; font-weight: 700; }
+.mine-feedback.loot > span:not(.game-art) { padding: 1px 2px; background: rgb(245 245 243 / 88%); font-size: 10px; font-weight: 700; }
 .mine-chips { position: absolute; width: 27px; height: 27px; left: 17%; bottom: -2px; animation: mine-chips-fall 330ms ease-out both; }
 .mine-tile:focus-visible { position: relative; z-index: 1; }
-.mine-actions { display: grid; grid-template-columns: 1.15fr 1fr; gap: 5px; margin-top: 5px; }
-.mine-actions button { display: flex; justify-content: center; align-items: center; gap: 2px; min-height: 26px; padding: 2px; font-size: 10px; white-space: nowrap; }
-.mine-button-art { width: 20px; height: 20px; flex: 0 0 20px; }
-.mine-upgrade { display: flex; justify-content: center; align-items: center; gap: 3px; width: 100%; min-height: 26px; margin-top: 4px; padding: 2px; font-size: 10px; }
-.mine-details { margin-top: 8px; font-size: 11px; line-height: 1.6; }
-.mine-details summary { min-height: 24px; cursor: pointer; }
+.mine-actions { display: grid; grid-template-columns: 1.15fr 1fr; gap: 4px; margin-top: 4px; }
+.mine-actions button { display: flex; justify-content: center; align-items: center; gap: 2px; min-height: 24px; padding: 2px; border: 0; background: rgb(248 248 246 / 88%); font-size: 10px; white-space: nowrap; }
+.mine-actions button.primary { color: #252525; font-weight: 700; }
+.mine-button-art { width: 18px; height: 18px; flex: 0 0 18px; }
+.mine-upgrade { display: flex; justify-content: center; align-items: center; gap: 3px; width: 100%; min-height: 24px; margin-top: 3px; padding: 2px; border: 0; background: rgb(248 248 246 / 88%); font-size: 10px; }
+.mine-details { margin-top: 4px; font-size: 11px; line-height: 1.6; }
+.mine-details summary { width: fit-content; min-height: 22px; padding: 1px 4px; background: rgb(248 248 246 / 88%); font-size: 10px; cursor: pointer; }
+.mine-details[open] { padding: 0 5px 5px; background: rgb(248 248 246 / 88%); }
 .mine-details summary:focus-visible { outline: 2px solid #252525; outline-offset: 2px; }
 .mine-details p, .mine-note { margin: 7px 0; color: #595959; font-size: 11px; line-height: 1.6; word-break: keep-all; }
+.mine-note { padding: 4px; background: rgb(245 245 243 / 96%); }
 .mine-collection { list-style: none; margin: 10px 0 0; padding: 0; }
 .mine-collection li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 5px 0; }
 .mine-collection-name { display: flex; align-items: center; gap: 3px; }

@@ -91,17 +91,6 @@ export default function Garden({ state, onAction, disabled }: GardenProps) {
         <h1>작은 정원</h1>
         <span title={`${state.coins.toLocaleString('ko-KR')} 코인`}>{numbers.format(state.coins)} 코인</span>
       </div>
-      <div className="garden-tools">
-        <Sprite atlas="garden" frame={matureFrames[species]} className="garden-seed-art" />
-        <label className="sr-only" htmlFor="garden-seed">심을 씨앗</label>
-        <select id="garden-seed" value={species} disabled={disabled} onChange={(event) => setSelectedSpecies(Number(event.target.value))}>
-          {PLANTS.map((plant, index) => isSpeciesUnlocked(state, index) && <option key={plant.name} value={index}>{plant.name}</option>)}
-        </select>
-        <button type="button" disabled={disabled || !canExpand || state.coins < cost} onClick={() => onAction({ type: 'expand' })}
-          aria-label={canExpand ? `화분 늘리기 ${cost.toLocaleString('ko-KR')} 코인` : '화분 확장 완료 12개'}>
-          {canExpand ? `화분 +1 · ${cost.toLocaleString('ko-KR')}` : '화분 12개 완료'}
-        </button>
-      </div>
       <div className={`garden-pots garden-pots-${Math.ceil(state.pots.length / 3)}`} aria-label={`화분 ${state.pots.length}개`}>
         {state.pots.map((plant, index) => {
           const ready = plant !== null && isPlantReady(plant, now);
@@ -127,6 +116,17 @@ export default function Garden({ state, onAction, disabled }: GardenProps) {
             </button>
           );
         })}
+      </div>
+      <div className="garden-tools">
+        <Sprite atlas="garden" frame={matureFrames[species]} className="garden-seed-art" />
+        <label className="sr-only" htmlFor="garden-seed">심을 씨앗</label>
+        <select id="garden-seed" value={species} disabled={disabled} onChange={(event) => setSelectedSpecies(Number(event.target.value))}>
+          {PLANTS.map((plant, index) => isSpeciesUnlocked(state, index) && <option key={plant.name} value={index}>{plant.name}</option>)}
+        </select>
+        <button type="button" disabled={disabled || !canExpand || state.coins < cost} onClick={() => onAction({ type: 'expand' })}
+          aria-label={canExpand ? `화분 늘리기 ${cost.toLocaleString('ko-KR')} 코인` : '화분 확장 완료 12개'}>
+          {canExpand ? `화분 +1 · ${cost.toLocaleString('ko-KR')}` : '화분 12개 완료'}
+        </button>
       </div>
       <details className="garden-details">
         <summary>도감 {discovered}/40 · 가꾸는 방법</summary>

@@ -214,9 +214,9 @@ export default function App() {
   const compact = state?.settings.compact ?? false;
   const gameDisabled = !ready || !state || busy || !!pendingBackup || saveFailed;
   return (
-    <div className={`shell${compact ? ' compact' : ''}${!visible ? ' motion-paused' : ''}`}>
+    <div className={`shell${compact ? ' compact' : screen === 'manage' ? '' : ' shell-game'}${!visible ? ' motion-paused' : ''}`}>
       <header className="titlebar">
-        <span className="brand" data-tauri-drag-region>CornerBits</span>
+        <span className="brand" data-tauri-drag-region><span data-tauri-drag-region>CornerBits</span></span>
         {compact && <span className="compact-status" role="status" aria-live="polite">{saveStatus}</span>}
         <div className="window-actions">
           <button className="window-button" type="button" aria-label={compact ? '펼치기' : '막대로 축소'} disabled={!ready || !state || busy || !!pendingBackup} onClick={() => void runOperation(() => changeSetting('compact', !compact))}>{compact ? '펼침' : '축소'}</button>
@@ -230,8 +230,8 @@ export default function App() {
           <button type="button" aria-pressed={screen === 'manage'} disabled={busy || !!pendingBackup} onClick={() => setScreen('manage')}>관리</button>
         </nav>
         <section className="save-summary" aria-label="저장 상태">
-          <span className="save-state" role="status" aria-live="polite">{saveStatus}</span>
-          <span className="saved-time">{state ? dateLabel(state.updatedAt) : '기록 확인 중'}</span>
+          <span className="save-state" role="status" aria-live="polite" title={state ? `마지막 저장 ${dateLabel(state.updatedAt)}` : undefined}>{saveStatus}</span>
+          {screen === 'manage' && <span className="saved-time">{state ? dateLabel(state.updatedAt) : '기록 확인 중'}</span>}
         </section>
         {(error || saveFailed) && <div className="message error" role="alert">{error || '자동 저장에 실패했습니다. 다시 시도해 주세요.'}{saveFailed && <button type="button" disabled={busy} onClick={() => void runOperation(retrySave)}>저장 다시 시도</button>}</div>}
         {note && <p className="message" aria-live="polite">{note}</p>}
@@ -239,7 +239,7 @@ export default function App() {
         {state && screen === 'garden' && <Garden state={state.games.garden} disabled={gameDisabled} onAction={(action) => void runOperation(() => play('garden', action))} />}
         {!state && screen !== 'manage' && <p className="description">{ready ? '기록을 확인할 수 없습니다. 관리 화면에서 백업을 복원해 주세요.' : '기록을 불러오고 있습니다.'}</p>}
         {screen === 'manage' && <>
-        <div className="page-heading"><h1>데이터 관리</h1><span className="version">v0.1.2</span></div>
+        <div className="page-heading"><h1>데이터 관리</h1><span className="version">v0.1.3</span></div>
         <section className="widget-info" aria-label="위젯 배치">
           <p className="section-label">바탕화면 위젯</p>
           <p className="description">다른 프로그램 뒤에 머뭅니다.<br />위쪽 제목을 끌어 위치를 옮기세요.<br />트레이에서 ‘위젯 찾기’를 누르면 다시 보입니다.</p>
@@ -268,7 +268,7 @@ export default function App() {
           <div className="confirm-actions"><button type="button" className="primary" disabled={busy} onClick={() => void runOperation(confirmRestore)}>이 백업으로 복원</button><button type="button" disabled={busy} onClick={() => setPendingBackup(null)}>취소</button></div>
         </section>}
         </>}
-        <footer>{platform.desktop ? '바탕화면 위젯 · 이 PC에 자동 저장' : '브라우저 미리보기 · 이 브라우저에만 저장'}</footer>
+        {(screen === 'manage' || !platform.desktop) && <footer>{platform.desktop ? '바탕화면 위젯 · 이 PC에 자동 저장' : '브라우저 미리보기 · 이 브라우저에만 저장'}</footer>}
       </main>}
       {compact && (error || saveFailed) && <button className="compact-error" aria-label="저장 오류 확인하고 펼치기" onClick={() => void runOperation(() => changeSetting('compact', false))}>저장 확인</button>}
     </div>
