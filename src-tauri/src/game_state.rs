@@ -263,18 +263,207 @@ impl CircuitState {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct FishingCast {
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub started_at: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub bite_at: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub expires_at: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub species: u64,
+}
+
+fn deserialize_cast<'de, D>(deserializer: D) -> Result<Option<FishingCast>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    Option::<FishingCast>::deserialize(deserializer)
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct FishingState {
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub rng: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub coins: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub rod: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub location: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub bait: u64,
+    #[serde(deserialize_with = "deserialize_integers")]
+    pub caught: Vec<u64>,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub total_caught: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub casts: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub misses: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub streak: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub best_streak: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub last_observed_at: u64,
+    #[serde(deserialize_with = "deserialize_cast")]
+    pub cast: Option<FishingCast>,
+}
+
+impl Default for FishingState {
+    fn default() -> Self {
+        Self {
+            rng: 0x6d2b79f5,
+            coins: 0,
+            rod: 1,
+            location: 0,
+            bait: 0,
+            caught: vec![0; 36],
+            total_caught: 0,
+            casts: 0,
+            misses: 0,
+            streak: 0,
+            best_streak: 0,
+            last_observed_at: 0,
+            cast: None,
+        }
+    }
+}
+
+impl FishingState {
+    fn validate(&self) -> Result<(), String> {
+        if !(1..=u32::MAX as u64).contains(&self.rng)
+            || self.coins > MAX_COUNT
+            || !(1..=8).contains(&self.rod)
+            || self.location > 5
+            || self.bait > 2
+            || self.caught.len() != 36
+            || !valid_total(&self.caught, self.total_caught)
+            || self.casts > MAX_COUNT
+            || self.misses > MAX_COUNT
+            || self.streak > self.best_streak
+            || self.best_streak > self.total_caught
+            || self.last_observed_at > MAX_TIMESTAMP
+            || self
+                .total_caught
+                .checked_add(self.misses)
+                .and_then(|total| total.checked_add(u64::from(self.cast.is_some())))
+                != Some(self.casts)
+            || self.cast.as_ref().is_some_and(|cast| {
+                cast.started_at > cast.bite_at
+                    || cast.bite_at >= cast.expires_at
+                    || cast.expires_at > MAX_TIMESTAMP
+                    || cast.started_at > self.last_observed_at
+                    || cast.species > 35
+                    || cast.species / 6 != self.location
+            })
+        {
+            return Err("낚시 저장 데이터가 올바르지 않습니다.".into());
+        }
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SwordResult {
+    #[default]
+    None,
+    Success,
+    Failure,
+    Safe,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SwordState {
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub rng: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub level: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub ore: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub shards: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub attempts: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub successes: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub failures: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub pity: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub total_polishes: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub last_observed_at: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub next_polish_at: u64,
+    pub last_result: SwordResult,
+}
+
+impl Default for SwordState {
+    fn default() -> Self {
+        Self {
+            rng: 0x1a2b3c4d,
+            level: 0,
+            ore: 0,
+            shards: 0,
+            attempts: 0,
+            successes: 0,
+            failures: 0,
+            pity: 0,
+            total_polishes: 0,
+            last_observed_at: 0,
+            next_polish_at: 0,
+            last_result: SwordResult::None,
+        }
+    }
+}
+
+impl SwordState {
+    fn validate(&self) -> Result<(), String> {
+        if !(1..=u32::MAX as u64).contains(&self.rng)
+            || self.level > 60
+            || self.ore > MAX_COUNT
+            || self.shards > MAX_COUNT
+            || self.attempts > MAX_COUNT
+            || self.successes != self.level
+            || self.failures > MAX_COUNT
+            || self.successes.checked_add(self.failures) != Some(self.attempts)
+            || self.pity > 39
+            || self.pity > self.failures
+            || self.total_polishes > MAX_COUNT
+            || self.last_observed_at > MAX_TIMESTAMP
+            || self.next_polish_at > MAX_TIMESTAMP
+            || self.next_polish_at > self.last_observed_at.saturating_add(10_000)
+        {
+            return Err("검 키우기 저장 데이터가 올바르지 않습니다.".into());
+        }
+        Ok(())
+    }
+}
+
 #[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Games {
     pub mine: MineState,
     pub garden: GardenState,
     pub circuit: CircuitState,
+    pub fishing: FishingState,
+    pub sword: SwordState,
 }
 
 impl Games {
     pub fn validate(&self) -> Result<(), String> {
         self.mine.validate()?;
         self.garden.validate()?;
-        self.circuit.validate()
+        self.circuit.validate()?;
+        self.fishing.validate()?;
+        self.sword.validate()
     }
 }

@@ -4,12 +4,12 @@ import { listen } from '@tauri-apps/api/event';
 import { decodeBackup, initialState, SaveQueue, type AppState } from './core/state';
 import { nextRevision, PendingOperations } from './core/lifecycle';
 import * as platform from './platform';
-import Mine from './games/Mine.tsx';
+import Fishing from './games/Fishing.tsx';
 import Garden from './games/Garden.tsx';
-import { reduceMine, type MineAction } from './games/mine';
+import { reduceFishing, type FishingAction } from './games/fishing';
 import { reduceGarden, type GardenAction } from './games/garden';
-import Circuit from './games/Circuit.tsx';
-import { reduceCircuit, type CircuitAction } from './games/circuit';
+import Sword from './games/Sword.tsx';
+import { reduceSword, type SwordAction } from './games/sword';
 import { Sprite } from './games/Art';
 
 function errorMessage(error: unknown): string {
@@ -30,8 +30,8 @@ export default function App() {
   const [error, setError] = useState('');
   const [note, setNote] = useState('');
   const [pendingBackup, setPendingBackup] = useState<AppState | null>(null);
-  const [backupSchema, setBackupSchema] = useState(4);
-  const [screen, setScreen] = useState<'mine' | 'garden' | 'circuit' | 'manage'>('mine');
+  const [backupSchema, setBackupSchema] = useState(5);
+  const [screen, setScreen] = useState<'fishing' | 'garden' | 'sword' | 'manage'>('fishing');
   const [visible, setVisible] = useState(() => !document.hidden);
   const [saveFailed, setSaveFailed] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -144,13 +144,13 @@ export default function App() {
     }
   }
 
-  async function play(game: 'mine' | 'garden' | 'circuit', action: MineAction | GardenAction | CircuitAction) {
+  async function play(game: 'fishing' | 'garden' | 'sword', action: FishingAction | GardenAction | SwordAction) {
     const current = stateRef.current;
     if (!ready || !current || pendingBackup || saveFailed) return;
-    const games = game === 'mine'
-      ? { ...current.games, mine: reduceMine(current.games.mine, action as MineAction) }
+    const games = game === 'fishing'
+      ? { ...current.games, fishing: reduceFishing(current.games.fishing, action as FishingAction, Date.now()) }
       : game === 'garden' ? { ...current.games, garden: reduceGarden(current.games.garden, action as GardenAction, Date.now()) }
-      : { ...current.games, circuit: reduceCircuit(current.games.circuit, action as CircuitAction) };
+      : { ...current.games, sword: reduceSword(current.games.sword, action as SwordAction, Date.now()) };
     if (games[game] === current.games[game]) return;
     setError('');
     setNote('');
@@ -229,9 +229,9 @@ export default function App() {
       </header>
       {!compact && <main>
         <nav className="game-nav" aria-label="화면 선택">
-          <button type="button" aria-label="광산" title="광산 친구들" aria-pressed={screen === 'mine'} disabled={busy || !!pendingBackup} onClick={() => setScreen('mine')}><Sprite atlas="mine" frame={0} /></button>
+          <button type="button" aria-label="낚시" title="작은 낚시터" aria-pressed={screen === 'fishing'} disabled={busy || !!pendingBackup} onClick={() => setScreen('fishing')}><Sprite atlas="fishing" frame={0} /></button>
           <button type="button" aria-label="정원" title="정원 친구들" aria-pressed={screen === 'garden'} disabled={busy || !!pendingBackup} onClick={() => setScreen('garden')}><Sprite atlas="garden" frame={6} /></button>
-          <button type="button" aria-label="회로" title="전구 친구들 · 회로 연결" aria-pressed={screen === 'circuit'} disabled={busy || !!pendingBackup} onClick={() => setScreen('circuit')}><Sprite atlas="charms" frame={1} /></button>
+          <button type="button" aria-label="검 키우기" title="작은 대장간" aria-pressed={screen === 'sword'} disabled={busy || !!pendingBackup} onClick={() => setScreen('sword')}><Sprite atlas="sword" frame={Math.min(9, Math.floor((state?.games.sword.level ?? 0) / 6))} /></button>
           <button type="button" aria-label="관리" title="기록 보관함" aria-pressed={screen === 'manage'} disabled={busy || !!pendingBackup} onClick={() => setScreen('manage')}><Sprite atlas="charms" frame={4} /></button>
         </nav>
         <section className="save-summary" aria-label="저장 상태">
@@ -240,9 +240,9 @@ export default function App() {
         </section>
         {(error || saveFailed) && <div className="message error" role="alert">{error || '자동 저장에 실패했습니다. 다시 시도해 주세요.'}{saveFailed && <button type="button" disabled={busy} onClick={() => void runOperation(retrySave)}>저장 다시 시도</button>}</div>}
         {note && <p className="message" aria-live="polite">{note}</p>}
-        {state && screen === 'mine' && <Mine state={state.games.mine} disabled={gameDisabled} onAction={(action) => void runOperation(() => play('mine', action))} />}
+        {state && screen === 'fishing' && <Fishing state={state.games.fishing} disabled={gameDisabled} onAction={(action) => void runOperation(() => play('fishing', action))} />}
         {state && screen === 'garden' && <Garden state={state.games.garden} disabled={gameDisabled} onAction={(action) => void runOperation(() => play('garden', action))} />}
-        {state && screen === 'circuit' && <Circuit state={state.games.circuit} disabled={gameDisabled} onAction={(action) => void runOperation(() => play('circuit', action))} />}
+        {state && screen === 'sword' && <Sword state={state.games.sword} disabled={gameDisabled} onAction={(action) => void runOperation(() => play('sword', action))} />}
         {!state && screen !== 'manage' && <p className="description">{ready ? '기록을 확인할 수 없습니다. 관리 화면에서 백업을 복원해 주세요.' : '기록을 불러오고 있습니다.'}</p>}
         {screen === 'manage' && <>
         <h1 className="sr-only">데이터 관리</h1>
@@ -271,13 +271,13 @@ export default function App() {
             <p className="description">광산·정원·전구 그림으로 세 게임을 바꿉니다. 그림에 마우스를 두면 설명이 나타납니다.</p>
             <p className="description">위쪽 제목을 끌어 위치를 옮기세요. 트레이의 ‘위젯 찾기’로 다시 볼 수 있습니다.</p>
             <p className="description">위쪽 화살표 상자는 백업 내보내기, 아래쪽 화살표 상자는 복원입니다. 세 게임의 진행도·도감·재화·설정을 함께 보관합니다.</p>
-            <span className="version">v0.3.0</span>
+            <span className="version">v0.4.0</span>
           </div>
         </details>
         {pendingBackup && <section className="restore-confirm" aria-label="복원 확인">
           <p>{dateLabel(pendingBackup.updatedAt)} 기록으로 바꿉니다. 현재 기록은 먼저 별도 보관합니다.</p>
-          <p>{backupSchema === 1 ? '1단계 설정 백업입니다. 복원하면 세 게임 진행도가 처음 상태로 바뀝니다.' : `광산 ${pendingBackup.games.mine.depth}층 · 채굴 ${pendingBackup.games.mine.totalMined}개 / 정원 수확 ${pendingBackup.games.garden.totalHarvests}회 · 화분 ${pendingBackup.games.garden.pots.length}개 / 회로 ${pendingBackup.games.circuit.records.filter((turns) => turns > 0).length}/300개 완료`}</p>
-          {backupSchema === 2 && <p>광산·정원 백업입니다. 복원하면 회로 기록은 처음 상태로 바뀝니다.</p>}
+          <p>{backupSchema === 1 ? '1단계 설정 백업입니다. 복원하면 세 게임 진행도가 처음 상태로 바뀝니다.' : `낚시 ${pendingBackup.games.fishing.totalCaught}마리 · 낚싯대 ${pendingBackup.games.fishing.rod}/8 / 정원 수확 ${pendingBackup.games.garden.totalHarvests}회 · 화분 ${pendingBackup.games.garden.pots.length}개 / 검 +${pendingBackup.games.sword.level}`}</p>
+          {backupSchema > 1 && backupSchema < 5 && <p>이전 게임 구성의 백업입니다. 정원과 광산·회로 기록은 보존하고, 낚시와 검 키우기는 처음 상태로 복원합니다.</p>}
           <div className="confirm-actions"><button type="button" className="primary" disabled={busy} onClick={() => void runOperation(confirmRestore)}>이 백업으로 복원</button><button type="button" disabled={busy} onClick={() => setPendingBackup(null)}>취소</button></div>
         </section>}
         </>}

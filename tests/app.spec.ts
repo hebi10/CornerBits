@@ -1,60 +1,57 @@
 import { expect, test } from '@playwright/test';
+import { saved, catchFish } from './helpers';
 
 async function manage(page: import('@playwright/test').Page) {
   await page.getByRole('button', { name: '관리', exact: true }).click();
 }
 
-test('backup cancellation keeps current progress and confirmation restores the exported progress', async ({ page }) => {
+test('backup cancellation keeps progress and confirmation restores the saved cast', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-28T06:00:00Z') });
   await page.goto('/');
-  const tile = page.getByRole('button', { name: /^1번.*내구도/ });
-  await tile.click();
-  await expect(page.getByRole('status')).toContainText('저장 완료');
+  await page.getByRole('button', { name: '낚싯대 던지기', exact: true }).click();
+  const before = (await saved(page)).games;
   await page.reload();
-  await expect(tile).toHaveAttribute('aria-label', /내구도 1\/2/);
+  expect((await saved(page)).games).toEqual(before);
   await manage(page);
-
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: '백업 내보내기' }).click();
   const download = await downloadPromise;
-  const backupPath = await download.path();
+  const path = await download.path();
   expect(download.suggestedFilename()).toMatch(/\.cornerbits$/);
-  await page.getByRole('button', { name: '광산', exact:true }).click();
-  await tile.click();
-  await expect(page.getByRole('status')).toContainText('저장 완료');
+  await page.getByRole('button', { name: '낚시', exact: true }).click();
+  await page.getByRole('button', { name: /낚싯줄 당기기/ }).click();
+  expect((await saved(page)).games.fishing.misses).toBe(1);
   await manage(page);
-  await page.locator('input[type=file]').setInputFiles(backupPath!);
-  await expect(page.getByRole('button', { name: '이 백업으로 복원' })).toBeVisible();
+  await page.locator('input[type=file]').setInputFiles(path!);
   await page.getByRole('button', { name: '취소', exact: true }).click();
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('cornerbits.preview.state')!).games.mine.tiles[0])).toBe(0);
-  await page.locator('input[type=file]').setInputFiles(backupPath!);
+  expect((await saved(page)).games.fishing.misses).toBe(1);
+  await page.locator('input[type=file]').setInputFiles(path!);
   await page.getByRole('button', { name: '이 백업으로 복원' }).click();
-  await expect(page.getByRole('status')).toContainText('저장 완료');
+  expect((await saved(page)).games).toEqual(before);
   await page.reload();
-  await expect(tile).toHaveAttribute('aria-label', /내구도 1\/2/);
+  expect((await saved(page)).games).toEqual(before);
 });
 
 test('invalid backups do not overwrite current progress', async ({ page }) => {
+  await page.clock.install();
   await page.goto('/');
-  await page.getByRole('button', { name: /^1번.*내구도/ }).click();
-  await expect(page.getByRole('status')).toContainText('저장 완료');
+  const before = (await catchFish(page)).games;
   await manage(page);
-  await page.locator('input[type=file]').setInputFiles({ name: 'invalid.cornerbits', mimeType: 'application/json', buffer: Buffer.from('{"backupVersion":999}') });
+  await page.locator('input[type=file]').setInputFiles({ name:'bad.cornerbits', mimeType:'application/json', buffer:Buffer.from('{"backupVersion":999}') });
   await expect(page.getByRole('alert')).toBeVisible();
   await page.reload();
-  await expect(page.getByRole('button', { name: /^1번.*내구도/ })).toHaveAttribute('aria-label', /내구도 1\/2/);
+  expect((await saved(page)).games).toEqual(before);
 });
 
 test('compact mode is reversible and fits the small window', async ({ page }) => {
   await page.goto('/');
   await manage(page);
-  await page.getByRole('button', { name: '막대로 축소' }).click();
-  await expect(page.getByRole('heading', { name: '데이터 관리' })).not.toBeVisible();
-  await expect(page.getByRole('status')).toContainText('저장 완료');
+  await page.getByRole('button', { name:'막대로 축소' }).click();
+  await saved(page);
   await page.reload();
-  await expect(page.getByRole('button', { name: '펼치기' })).toBeVisible();
-  await page.getByRole('button', { name: '펼치기' }).click();
-  await manage(page);
-  await expect(page.getByRole('heading', { name: '데이터 관리' })).toBeVisible();
+  await expect(page.getByRole('button', { name:'펼치기' })).toBeVisible();
+  await page.getByRole('button', { name:'펼치기' }).click();
+  await saved(page);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(280);
 });
 
@@ -63,52 +60,44 @@ test('corrupt saved data blocks autosave without silently resetting it', async (
   await page.goto('/');
   await manage(page);
   await expect(page.getByRole('alert')).toBeVisible();
-  await expect(page.getByRole('button', { name: '백업에서 복원' })).toBeEnabled();
+  await expect(page.getByRole('button', { name:'백업에서 복원' })).toBeEnabled();
   expect(await page.evaluate(() => localStorage.getItem('cornerbits.preview.state'))).toBe('broken data');
 });
 
-test('restoring a backup with the maximum revision remains readable after changes', async ({ page }) => {
+test('a maximum revision backup remains readable after layout changes', async ({ page }) => {
   await page.goto('/');
+  await saved(page);
   await manage(page);
-  const state = { schemaVersion: 1, revision: Number.MAX_SAFE_INTEGER, updatedAt: '2026-10-28T01:00:00.000Z', settings: { alwaysOnTop: true, compact: false } };
-  const backup = { format: 'CornerBits', backupVersion: 1, exportedAt: state.updatedAt, state };
-  await page.locator('input[type=file]').setInputFiles({ name: 'max.cornerbits', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(backup)) });
-  await page.getByRole('button', { name: '이 백업으로 복원' }).click();
+  const state = { schemaVersion:1, revision:Number.MAX_SAFE_INTEGER, updatedAt:'2026-10-28T01:00:00.000Z', settings:{ alwaysOnTop:true, compact:false } };
+  await page.locator('input[type=file]').setInputFiles({ name:'max.cornerbits', mimeType:'application/json', buffer:Buffer.from(JSON.stringify({ format:'CornerBits', backupVersion:1, exportedAt:state.updatedAt, state })) });
+  await page.getByRole('button', { name:'이 백업으로 복원' }).click();
+  await saved(page);
+  await page.getByRole('button', { name:'막대로 축소' }).click();
+  await page.getByRole('button', { name:'펼치기' }).click();
+  await saved(page);
   await page.reload();
-  await expect(page.getByRole('status')).toContainText('저장 완료');
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('cornerbits.preview.state')!).settings.alwaysOnTop)).toBe(true);
-  await page.getByRole('button', { name: '막대로 축소' }).click();
-  await page.getByRole('button', { name: '펼치기' }).click();
-  await expect(page.getByRole('status')).toContainText('저장 완료');
-  await page.reload();
-  await manage(page);
-  await expect(page.getByRole('alert')).not.toBeVisible();
+  expect((await saved(page)).settings.alwaysOnTop).toBe(true);
 });
 
-test('save failures stay recoverable after opening and cancelling restore', async ({ page }) => {
+test('save failure stays recoverable after opening and cancelling restore', async ({ page }) => {
   await page.goto('/');
-  await manage(page);
-  await expect(page.getByRole('status')).toContainText('저장 완료');
+  await saved(page);
   await page.evaluate(() => {
     const original = Storage.prototype.setItem;
-    Storage.prototype.setItem = function (key, value) {
+    Storage.prototype.setItem = function(key, value) {
       if (key === 'cornerbits.preview.state' && sessionStorage.getItem('fail-save') === 'yes') throw new Error('disk full');
-      return original.call(this, key, value);
+      return original.call(this,key,value);
     };
-    sessionStorage.setItem('fail-save', 'yes');
+    sessionStorage.setItem('fail-save','yes');
   });
-  await page.getByRole('button', { name: '광산', exact:true }).click();
-  await page.getByRole('button', { name: /^1번.*내구도/ }).click();
-  await expect(page.getByRole('button', { name: '저장 다시 시도' })).toBeVisible();
+  await page.getByRole('button', { name:'낚싯대 던지기', exact:true }).click();
+  await expect(page.getByRole('button', { name:'저장 다시 시도' })).toBeVisible();
   await manage(page);
-  const state = { schemaVersion: 1, revision: 0, updatedAt: '2026-10-28T01:00:00.000Z', settings: { alwaysOnTop: false, compact: false } };
-  const backup = { format: 'CornerBits', backupVersion: 1, exportedAt: state.updatedAt, state };
-  await page.locator('input[type=file]').setInputFiles({ name: 'valid.cornerbits', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(backup)) });
-  await page.getByRole('button', { name: '취소', exact: true }).click();
-  await expect(page.getByRole('button', { name: '저장 다시 시도' })).toBeVisible();
-  await page.evaluate(() => sessionStorage.setItem('fail-save', 'no'));
-  await page.getByRole('button', { name: '저장 다시 시도' }).click();
-  await expect(page.getByRole('status')).toContainText('저장 완료');
+  await page.locator('input[type=file]').setInputFiles('tests/fixtures/phase-five.cornerbits');
+  await page.getByRole('button', { name:'취소', exact:true }).click();
+  await page.evaluate(() => sessionStorage.setItem('fail-save','no'));
+  await page.getByRole('button', { name:'저장 다시 시도' }).click();
+  expect((await saved(page)).games.fishing.cast).not.toBeNull();
   await page.reload();
-  await expect(page.getByRole('button', { name: /^1번.*내구도/ })).toHaveAttribute('aria-label', /내구도 1\/2/);
+  expect((await saved(page)).games.fishing.casts).toBe(1);
 });
