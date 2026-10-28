@@ -1,97 +1,55 @@
-import { describe, expect, it } from 'vitest';
-import {
-  ANCHORS, activityDuration, initialCoast, sampleCoast, settleCoast, startActivity,
-  type CoastalState,
-} from './model';
+import {describe,expect,it} from 'vitest';
+import {ANCHORS,COIN_PER_FISH,PROJECTS,activityDuration,advanceCoast,canStartActivity,initialCoast,parseCoast,projectCost,sampleCoast,sellFish,startActivity,type CoastalAction,type CoastalState} from './model';
 
-describe('coastal session activities', () => {
-  it('starts a fresh session and locks other activities until the return finishes', () => {
-    const state = initialCoast();
-    expect(state).toEqual({ activity: null, startedAt: null, catches: 0, wood: 0, decoration: 0 });
-    const fishing = startActivity(state, 'fish', 100);
-    expect(fishing.activity).toBe('fish');
-    expect(fishing.startedAt).toBe(100);
-    expect(startActivity(fishing, 'gather', 200)).toBe(fishing);
-    expect(startActivity(fishing, 'gather', 10_000)).toBe(fishing);
-    expect(state.activity).toBeNull();
-    expect(initialCoast()).not.toBe(state);
+const finish=(state:CoastalState,action:CoastalAction)=>advanceCoast(startActivity(state,action),activityDuration(action));
+const funded=():CoastalState=>({...initialCoast(),catches:20,fish:20,totalGathered:100,wood:100,coins:500});
+
+describe('durable coastal resources and activities',()=>{
+  it('starts with strict independent durable progress and one active trip',()=>{
+    const state=initialCoast();expect(state).toEqual({activity:null,elapsedMs:0,catches:0,totalGathered:0,fish:0,wood:0,coins:0,decoration:0,houseLevel:1});
+    const started=startActivity(state,'fish');expect(started).toMatchObject({activity:'fish',elapsedMs:0});expect(startActivity(started,'gather')).toBe(started);expect(state.activity).toBeNull();expect(initialCoast()).not.toBe(state);
   });
-
-  it('awards a fish once after the full return, including a late completion tick', () => {
-    const fishing = startActivity(initialCoast(), 'fish', 100);
-    expect(activityDuration('fish')).toBe(5_200);
-    expect(settleCoast(fishing, 5_299)).toBe(fishing);
-    const finished = settleCoast(fishing, 5_300);
-    expect(finished).toEqual({ activity: null, startedAt: null, catches: 1, wood: 0, decoration: 0 });
-    expect(settleCoast(finished, 100_000)).toBe(finished);
-    expect(settleCoast(fishing, 100_000).catches).toBe(1);
-    expect(fishing.catches).toBe(0);
+  it('advances a saved trip and awards exactly once after its completed return',()=>{
+    const started=startActivity(initialCoast(),'fish');const partial=advanceCoast(started,1500);expect(partial).toMatchObject({activity:'fish',elapsedMs:1500,fish:0,catches:0});
+    const restored=parseCoast(JSON.parse(JSON.stringify(partial)));const almost=advanceCoast(restored,3699);expect(almost.activity).toBe('fish');expect(almost.fish).toBe(0);
+    const done=advanceCoast(almost,1);expect(done).toMatchObject({activity:null,elapsedMs:0,fish:1,catches:1});expect(advanceCoast(done,1_000_000)).toBe(done);expect(started.fish).toBe(0);
   });
-
-  it('connects gathering to three wood-funded decorations and stops at completion', () => {
-    let state = initialCoast();
-    expect(startActivity(state, 'decorate', 0)).toBe(state);
-    expect(activityDuration('gather')).toBe(4_200);
-    expect(activityDuration('decorate')).toBe(4_200);
-    for (let decoration = 0; decoration < 3; decoration += 1) {
-      const at = decoration * 10_000;
-      state = settleCoast(startActivity(state, 'gather', at), at + 4_200);
-      expect(state.wood).toBe(1);
-      const decorating = startActivity(state, 'decorate', at + 4_500);
-      expect(decorating.wood).toBe(1);
-      expect(settleCoast(decorating, at + 8_699)).toBe(decorating);
-      state = settleCoast(decorating, at + 8_700);
-      expect(state.wood).toBe(0);
-      expect(state.decoration).toBe(decoration + 1);
-      expect(settleCoast(state, at + 9_000)).toBe(state);
-    }
-    const supplied = { ...state, wood: 1 };
-    expect(startActivity(supplied, 'decorate', 40_000)).toBe(supplied);
+  it('connects fish sales and wood gathering to a crafted flowerpot',()=>{
+    let state=initialCoast();for(let i=0;i<3;i++){state=finish(state,'fish');state=finish(state,'gather');}
+    expect(state).toMatchObject({fish:3,catches:3,wood:3,totalGathered:3});state=sellFish(state);expect(COIN_PER_FISH).toBe(15);expect(state).toMatchObject({fish:0,catches:3,coins:45});
+    const project=startActivity(state,'flower');expect(project).toMatchObject({activity:'flower',wood:0,coins:25,decoration:0});const done=advanceCoast(project,4200);expect(done).toMatchObject({decoration:1,wood:0,coins:25});expect(startActivity(done,'flower')).toBe(done);
   });
-
-  it('walks through the central path and returns over the same points', () => {
-    const fishing = startActivity(initialCoast(), 'fish', 0);
-    expect(sampleCoast(fishing, 0)).toMatchObject({ ...ANCHORS.home, pose: 'walk', phase: 'outbound', progress: 0 });
-    expect(sampleCoast(fishing, 600)).toMatchObject({ x: 48, y: 56, phase: 'outbound' });
-    expect(sampleCoast(fishing, 1_200)).toMatchObject({ ...ANCHORS.dock, pose: 'fish', phase: 'working' });
-    expect(sampleCoast(fishing, 4_000)).toMatchObject({ ...ANCHORS.dock, pose: 'walk', phase: 'inbound' });
-    expect(sampleCoast(fishing, 4_600)).toMatchObject({ x: 48, y: 56, phase: 'inbound' });
-    expect(sampleCoast(fishing, 5_200)).toMatchObject({ ...ANCHORS.home, pose: 'idle', frame: 0, phase: 'idle', progress: 1 });
-    expect(sampleCoast(initialCoast(), 5_200)).toMatchObject({ ...ANCHORS.home, pose: 'idle', phase: 'idle', progress: 0 });
+  it('reserves project costs once and restores a pending build without charging again',()=>{
+    const ready={...initialCoast(),totalGathered:3,wood:3,coins:20};const started=startActivity(ready,'flower');expect(started).toMatchObject({wood:0,coins:0,decoration:0});
+    const pending=parseCoast(advanceCoast(started,2000));expect(pending.elapsedMs).toBe(2000);expect(advanceCoast(pending,2200)).toMatchObject({wood:0,coins:0,decoration:1,activity:null});
   });
-
-  it('samples the action-specific sprite rows while keeping frame changes deterministic', () => {
-    const fishing = startActivity(initialCoast(), 'fish', 0);
-    expect(sampleCoast(fishing, 180).frame).toBe(1);
-    expect(sampleCoast(fishing, 1_200).frame).toBe(4);
-    expect(sampleCoast(fishing, 1_400).frame).toBe(5);
-    expect(sampleCoast(fishing, 1_800).frame).toBe(7);
-    expect(sampleCoast(fishing, 2_000).frame).toBe(4);
-    const gathering = startActivity(initialCoast(), 'gather', 0);
-    expect(sampleCoast(gathering, 1_200)).toMatchObject({ ...ANCHORS.beach, pose: 'gather', frame: 8 });
-    const decorating = startActivity({ ...initialCoast(), wood: 1 }, 'decorate', 0);
-    expect(sampleCoast(decorating, 1_200)).toMatchObject({ ...ANCHORS.house, pose: 'decorate', frame: 12 });
+  it('makes home expansion increase both resource yields and unlock projects',()=>{
+    const state=funded();expect(canStartActivity(state,'lantern')).toBe(false);expect(canStartActivity(state,'bench')).toBe(false);expect(projectCost(state,'upgrade')).toEqual({wood:12,coins:75});
+    const upgrade=startActivity(state,'upgrade');expect(upgrade).toMatchObject({wood:88,coins:425,houseLevel:1});let level2=advanceCoast(upgrade,4200);expect(level2.houseLevel).toBe(2);expect(projectCost(level2,'upgrade')).toEqual({wood:25,coins:150});
+    expect(finish(level2,'fish').fish-level2.fish).toBe(2);expect(finish(level2,'gather').wood-level2.wood).toBe(2);expect(canStartActivity(level2,'lantern')).toBe(true);
+    level2=finish(level2,'lantern');expect(level2.decoration).toBe(2);const level3=finish(level2,'upgrade');expect(level3.houseLevel).toBe(3);expect(finish(level3,'fish').fish-level3.fish).toBe(3);expect(finish(level3,'gather').wood-level3.wood).toBe(3);expect(canStartActivity(level3,'bench')).toBe(true);expect(startActivity(level3,'upgrade')).toBe(level3);
   });
-
-  it('ignores invalid numbers and treats a reversed clock as zero elapsed', () => {
-    const state = initialCoast();
-    const fishing = startActivity(state, 'fish', 100);
-    for (const now of [NaN, Infinity, -Infinity, -1]) {
-      expect(startActivity(state, 'fish', now)).toBe(state);
-      expect(settleCoast(fishing, now)).toBe(fishing);
-      expect(sampleCoast(fishing, now)).toMatchObject({ ...ANCHORS.home, progress: 0 });
-    }
-    expect(settleCoast(fishing, 99)).toBe(fishing);
-    expect(sampleCoast(fishing, 99)).toMatchObject({ ...ANCHORS.home, phase: 'outbound', frame: 0, progress: 0 });
-    const invalidStates: CoastalState[] = [
-      { ...state, catches: NaN }, { ...state, wood: Infinity },
-      { ...state, decoration: -1 }, { ...state, wood: 0.5 },
-      { ...fishing, startedAt: NaN },
-    ];
-    for (const invalid of invalidStates) {
-      expect(startActivity(invalid, 'fish', 0)).toBe(invalid);
-      expect(settleCoast(invalid, 10_000)).toBe(invalid);
-      expect(sampleCoast(invalid, 10_000)).toMatchObject({ ...ANCHORS.home, pose: 'idle', progress: 0 });
-    }
+  it('supports independent decoration ownership while enforcing required home levels',()=>{
+    const state={...funded(),houseLevel:3};const bench=finish(state,'bench');expect(bench.decoration).toBe(4);const all=finish(finish(bench,'flower'),'lantern');expect(all.decoration).toBe(7);for(const project of PROJECTS)expect(startActivity(all,project.action)).toBe(all);
+    expect(PROJECTS.map(({name,bit,frame,requiredLevel,wood,coins})=>({name,bit,frame,requiredLevel,wood,coins}))).toEqual([{name:'꽃화분',bit:1,frame:5,requiredLevel:1,wood:3,coins:20},{name:'등불',bit:2,frame:6,requiredLevel:2,wood:6,coins:45},{name:'벤치',bit:4,frame:7,requiredLevel:3,wood:12,coins:90}]);
+  });
+  it('rejects unavailable transactions and keeps sale atomic at the coin cap',()=>{
+    const state=initialCoast();for(const action of ['flower','lantern','bench','upgrade'] as const)expect(startActivity(state,action)).toBe(state);expect(sellFish(state)).toBe(state);
+    const active=startActivity(funded(),'gather');expect(sellFish(active)).toBe(active);const tooMuch={...funded(),coins:1_000_000_000_000};expect(sellFish(tooMuch)).toBe(tooMuch);const boundary={...funded(),fish:1,coins:1_000_000_000_000-15};expect(sellFish(boundary)).toMatchObject({fish:0,coins:1_000_000_000_000});
+  });
+  it('samples the saved elapsed time through the existing path and action frames',()=>{
+    const active=startActivity(initialCoast(),'fish');expect(sampleCoast(active)).toMatchObject({...ANCHORS.home,pose:'walk',phase:'outbound',frame:0,progress:0});expect(sampleCoast(advanceCoast(active,600))).toMatchObject({x:48,y:56,phase:'outbound'});
+    expect(sampleCoast(advanceCoast(active,1200))).toMatchObject({...ANCHORS.dock,pose:'fish',phase:'working',frame:4});expect(sampleCoast(advanceCoast(active,1400)).frame).toBe(5);expect(sampleCoast(advanceCoast(active,4600))).toMatchObject({x:48,y:56,phase:'inbound'});
+    expect(sampleCoast(startActivity(funded(),'flower'))).toMatchObject({...ANCHORS.home,pose:'walk'});expect(sampleCoast(advanceCoast(startActivity(funded(),'upgrade'),1200))).toMatchObject({...ANCHORS.house,pose:'decorate',frame:12});
+  });
+  it('strictly rejects missing unknown fractional unowned and inconsistent records',()=>{
+    const state=initialCoast();const {fish:ignored,...missing}=state;void ignored;
+    const invalid=[missing,{...state,extra:true},{...state,elapsedMs:1},{...state,fish:1},{...state,wood:1},{...state,houseLevel:0},{...state,houseLevel:4},{...state,decoration:2},{...state,decoration:8},{...state,coins:0.5},{...state,catches:NaN},{...state,coins:1_000_000_000_001},{...state,activity:'decorate'},{...state,activity:'fish',elapsedMs:5200},{...state,activity:'upgrade',houseLevel:3},{...state,activity:'flower',decoration:1}];
+    for(const value of invalid)expect(()=>parseCoast(value)).toThrow(/[가-힣]/);expect(parseCoast(state)).toEqual(state);
+  });
+  it('guards invalid deltas and maximum-resource pending rewards without losing resources',()=>{
+    const active=startActivity(initialCoast(),'fish');for(const delta of [NaN,Infinity,-1,0.5])expect(advanceCoast(active,delta)).toBe(active);expect(advanceCoast(active,0)).toBe(active);
+    const full={...initialCoast(),catches:1_000_000_000_000,fish:1_000_000_000_000,totalGathered:1_000_000_000_000,wood:1_000_000_000_000};expect(startActivity(full,'fish')).toBe(full);expect(startActivity(full,'gather')).toBe(full);expect(()=>parseCoast({...full,activity:'fish'})).toThrow();expect(()=>parseCoast({...full,activity:'gather'})).toThrow();
+    const invalid={...initialCoast(),wood:Infinity};expect(startActivity(invalid,'fish')).toBe(invalid);expect(advanceCoast(invalid,10000)).toBe(invalid);expect(sellFish(invalid)).toBe(invalid);
   });
 });

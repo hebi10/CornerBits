@@ -1,6 +1,6 @@
 use crate::game_state::{
-    deserialize_integer, CircuitState, Games, GardenState, LegacyFishingState, LegacyFishingV6,
-    LegacyGardenState, MineState, SwordState,
+    deserialize_integer, CircuitState, CoastState, FishingState, Games, GardenState,
+    LegacyFishingState, LegacyFishingV6, LegacyGardenState, MineState, SwordState,
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -42,7 +42,7 @@ pub struct Backup {
 
 impl AppState {
     pub fn validate(&self) -> Result<(), String> {
-        if self.schema_version != 7 {
+        if self.schema_version != 8 {
             return Err("지원하지 않는 데이터 버전입니다.".into());
         }
         if self.revision > 9_007_199_254_740_991 {
@@ -157,6 +157,28 @@ struct V6State {
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct V7Games {
+    mine: MineState,
+    garden: GardenState,
+    circuit: CircuitState,
+    fishing: FishingState,
+    sword: SwordState,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct V7State {
+    #[serde(deserialize_with = "deserialize_integer")]
+    schema_version: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    revision: u64,
+    updated_at: String,
+    settings: Settings,
+    games: V7Games,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct V2State {
     #[serde(deserialize_with = "deserialize_integer")]
     schema_version: u64,
@@ -171,6 +193,7 @@ struct V2State {
 #[serde(untagged)]
 enum StoredState {
     Current(AppState),
+    V7(V7State),
     V6(V6State),
     V5(V5State),
     V4(V4State),
@@ -183,13 +206,35 @@ impl StoredState {
     fn normalize(self) -> Result<(AppState, bool), String> {
         let (state, migrated) = match self {
             Self::Current(state) => (state, false),
+            Self::V7(previous) => {
+                if previous.schema_version != 7 {
+                    return Err("지원하지 않는 데이터 버전입니다.".into());
+                }
+                (
+                    AppState {
+                        schema_version: 8,
+                        revision: previous.revision,
+                        updated_at: previous.updated_at,
+                        settings: previous.settings,
+                        games: Games {
+                            mine: previous.games.mine,
+                            garden: previous.games.garden,
+                            circuit: previous.games.circuit,
+                            fishing: previous.games.fishing,
+                            sword: previous.games.sword,
+                            coast: CoastState::default(),
+                        },
+                    },
+                    true,
+                )
+            }
             Self::V6(previous) => {
                 if previous.schema_version != 6 {
                     return Err("지원하지 않는 데이터 버전입니다.".into());
                 }
                 (
                     AppState {
-                        schema_version: 7,
+                        schema_version: 8,
                         revision: previous.revision,
                         updated_at: previous.updated_at,
                         settings: previous.settings,
@@ -199,6 +244,7 @@ impl StoredState {
                             circuit: previous.games.circuit,
                             fishing: previous.games.fishing.into(),
                             sword: previous.games.sword,
+                            coast: CoastState::default(),
                         },
                     },
                     true,
@@ -210,7 +256,7 @@ impl StoredState {
                 }
                 (
                     AppState {
-                        schema_version: 7,
+                        schema_version: 8,
                         revision: previous.revision,
                         updated_at: previous.updated_at,
                         settings: previous.settings,
@@ -220,6 +266,7 @@ impl StoredState {
                             circuit: previous.games.circuit,
                             fishing: previous.games.fishing.into(),
                             sword: previous.games.sword,
+                            coast: CoastState::default(),
                         },
                     },
                     true,
@@ -231,7 +278,7 @@ impl StoredState {
                 }
                 (
                     AppState {
-                        schema_version: 7,
+                        schema_version: 8,
                         revision: previous.revision,
                         updated_at: previous.updated_at,
                         settings: previous.settings,
@@ -251,7 +298,7 @@ impl StoredState {
                 }
                 (
                     AppState {
-                        schema_version: 7,
+                        schema_version: 8,
                         revision: previous.revision,
                         updated_at: previous.updated_at,
                         settings: previous.settings,
@@ -271,7 +318,7 @@ impl StoredState {
                 }
                 (
                     AppState {
-                        schema_version: 7,
+                        schema_version: 8,
                         revision: previous.revision,
                         updated_at: previous.updated_at,
                         settings: previous.settings,
@@ -291,7 +338,7 @@ impl StoredState {
                 }
                 (
                     AppState {
-                        schema_version: 7,
+                        schema_version: 8,
                         revision: legacy.revision,
                         updated_at: legacy.updated_at,
                         settings: legacy.settings,
@@ -648,7 +695,7 @@ mod tests {
 
     fn state(revision: u64) -> AppState {
         AppState {
-            schema_version: 7,
+            schema_version: 8,
             revision,
             updated_at: "2026-10-28T01:00:00.000Z".into(),
             settings: Settings {
@@ -755,6 +802,179 @@ mod tests {
         value
     }
 
+    fn populated_v8() -> serde_json::Value {
+        let mut value = populated_v7();
+        value["schemaVersion"] = serde_json::json!(8);
+        value["games"]["coast"] = initial_coast_value();
+        value
+    }
+
+    fn initial_coast_value() -> serde_json::Value {
+        serde_json::json!({"activity":null,"elapsedMs":0,"catches":0,"totalGathered":0,
+            "fish":0,"wood":0,"coins":0,"decoration":0,"houseLevel":1})
+    }
+
+    #[test]
+    fn v8_accepts_reserved_work_and_validates_coast_fields_and_relations() {
+        let mut value = populated_v8();
+        value["schemaVersion"] = serde_json::json!(8);
+        value["games"]["coast"] = initial_coast_value();
+        let coast = serde_json::json!({"activity":"lantern","elapsedMs":4199,"catches":5,
+            "totalGathered":9,"fish":2,"wood":0,"coins":0,"decoration":1,"houseLevel":2});
+        value["games"]["coast"] = coast.clone();
+        let good = parse_backup(&serde_json::to_vec(&backup_value(value.clone())).unwrap())
+            .expect("schema8 accepts already reserved work without charging again");
+        assert_eq!(serde_json::to_value(&good.state).unwrap(), value);
+        for (key, invalid) in [
+            ("activity", serde_json::json!("unknown")),
+            ("elapsedMs", serde_json::json!(4200)),
+            ("elapsedMs", serde_json::json!(1.5)),
+            ("fish", serde_json::json!(6)),
+            ("wood", serde_json::json!(10)),
+            ("coins", serde_json::json!(1_000_000_000_001_u64)),
+            ("houseLevel", serde_json::json!(1)),
+            ("decoration", serde_json::json!(3)),
+        ] {
+            let mut invalid_state = value.clone();
+            invalid_state["games"]["coast"][key] = invalid;
+            assert!(
+                parse_backup(&serde_json::to_vec(&backup_value(invalid_state)).unwrap()).is_err(),
+                "accepted {key}"
+            );
+        }
+        for key in coast.as_object().unwrap().keys() {
+            let mut missing = value.clone();
+            missing["games"]["coast"]
+                .as_object_mut()
+                .unwrap()
+                .remove(key);
+            assert!(
+                parse_backup(&serde_json::to_vec(&backup_value(missing)).unwrap()).is_err(),
+                "accepted missing {key}"
+            );
+        }
+    }
+
+    #[test]
+    fn v8_migrates_v7_after_preserving_exact_original_and_keeps_legacy_games() {
+        let previous = populated_v7();
+        let original = serde_json::to_vec_pretty(&previous).unwrap();
+        let mut expected = previous.clone();
+        expected["schemaVersion"] = serde_json::json!(8);
+        expected["games"]["coast"] = initial_coast_value();
+        let directory = tempdir().unwrap();
+        let path = directory.path().join("state.json");
+        fs::write(&path, &original).unwrap();
+        let store = Store::new(directory.path().to_owned());
+        assert_eq!(
+            serde_json::to_value(store.inspect().unwrap().unwrap()).unwrap(),
+            expected
+        );
+        assert_eq!(fs::read(&path).unwrap(), original);
+        assert!(!directory.path().join("snapshots").exists());
+        assert_eq!(
+            serde_json::to_value(store.load().unwrap().unwrap()).unwrap(),
+            expected
+        );
+        let snapshot = fs::read_dir(directory.path().join("snapshots"))
+            .unwrap()
+            .next()
+            .unwrap()
+            .unwrap()
+            .path();
+        assert_eq!(fs::read(snapshot).unwrap(), original);
+        let blocked = tempdir().unwrap();
+        fs::write(blocked.path().join("state.json"), &original).unwrap();
+        fs::write(blocked.path().join("snapshots"), b"blocked").unwrap();
+        assert!(Store::new(blocked.path().to_owned()).load().is_err());
+        assert_eq!(
+            fs::read(blocked.path().join("state.json")).unwrap(),
+            original
+        );
+    }
+
+    #[test]
+    fn v8_coast_pending_completion_boundaries_preserve_rejected_saves_and_restores() {
+        const MAX: u64 = 1_000_000_000_000;
+        let mut good = populated_v8();
+        let directory = tempdir().unwrap();
+        let store = Store::new(directory.path().to_owned());
+        let state: AppState = serde_json::from_value(good.clone()).unwrap();
+        store.save_at(&state, now(28)).unwrap();
+        let path = directory.path().join("state.json");
+        let original = fs::read(&path).unwrap();
+        for (action, level, decoration, duration) in [
+            ("fish", 3, 7, 5200),
+            ("gather", 3, 7, 4200),
+            ("flower", 1, 0, 4200),
+            ("lantern", 2, 1, 4200),
+            ("bench", 3, 3, 4200),
+            ("upgrade", 2, 3, 4200),
+        ] {
+            good["games"]["coast"] = serde_json::json!({"activity":action,
+                "elapsedMs":duration-1,"catches":MAX-level,"fish":MAX-level,
+                "totalGathered":MAX-level,"wood":0,"coins":0,
+                "decoration":decoration,"houseLevel":level});
+            assert!(
+                parse_backup(&serde_json::to_vec(&backup_value(good.clone())).unwrap()).is_ok(),
+                "rejected reserved {action} at its last incomplete millisecond"
+            );
+            let mut invalid = good.clone();
+            invalid["games"]["coast"]["elapsedMs"] = serde_json::json!(duration);
+            assert!(parse_backup(&serde_json::to_vec(&backup_value(invalid)).unwrap()).is_err());
+        }
+        let mut invalid_coasts = Vec::new();
+        for (action, counter) in [("fish", "catches"), ("gather", "totalGathered")] {
+            let mut coast = initial_coast_value();
+            coast["activity"] = serde_json::json!(action);
+            coast["houseLevel"] = serde_json::json!(3);
+            coast[counter] = serde_json::json!(MAX - 2);
+            invalid_coasts.push(coast);
+        }
+        for (action, level, decoration) in [
+            ("flower", 1, 1),
+            ("lantern", 1, 0),
+            ("lantern", 2, 2),
+            ("bench", 2, 0),
+            ("bench", 3, 4),
+            ("upgrade", 3, 0),
+        ] {
+            let mut coast = initial_coast_value();
+            coast["activity"] = serde_json::json!(action);
+            coast["houseLevel"] = serde_json::json!(level);
+            coast["decoration"] = serde_json::json!(decoration);
+            invalid_coasts.push(coast);
+        }
+        for (key, invalid) in [
+            ("elapsedMs", serde_json::json!(1)),
+            ("decoration", serde_json::json!(2)),
+            ("houseLevel", serde_json::json!(0)),
+            ("houseLevel", serde_json::json!(4)),
+            ("coins", serde_json::json!(-1)),
+            ("coins", serde_json::json!("0")),
+            ("coins", serde_json::json!(0.5)),
+            ("coins", serde_json::json!(9_007_199_254_740_992_u64)),
+            ("extra", serde_json::json!(0)),
+        ] {
+            let mut coast = initial_coast_value();
+            coast[key] = invalid;
+            invalid_coasts.push(coast);
+        }
+        for coast in invalid_coasts {
+            good["games"]["coast"] = coast.clone();
+            assert!(
+                parse_backup(&serde_json::to_vec(&backup_value(good.clone())).unwrap()).is_err(),
+                "accepted invalid coast {coast}"
+            );
+            if let Ok(state) = serde_json::from_value::<AppState>(good.clone()) {
+                assert!(store.save_at(&state, now(28)).is_err());
+                assert!(store.restore_at(&state, now(28)).is_err());
+            }
+            assert_eq!(fs::read(&path).unwrap(), original);
+            assert!(!directory.path().join("snapshots").exists());
+        }
+    }
+
     #[test]
     fn inspect_normalizes_supported_versions_without_changing_files() {
         let cases = [
@@ -765,6 +985,7 @@ mod tests {
             populated_v5(),
             populated_v6(),
             populated_v7(),
+            populated_v8(),
         ];
         for original in cases {
             let directory = tempdir().unwrap();
@@ -773,7 +994,7 @@ mod tests {
             let bytes = serde_json::to_vec_pretty(&original).unwrap();
             fs::write(&path, &bytes).unwrap();
             let inspected = store.inspect().unwrap().unwrap();
-            assert_eq!(inspected.schema_version, 7);
+            assert_eq!(inspected.schema_version, 8);
             assert_eq!(inspected.revision, original["revision"].as_u64().unwrap());
             assert_eq!(
                 inspected.updated_at,
@@ -814,9 +1035,9 @@ mod tests {
         fs::create_dir(&snapshots).unwrap();
         let existing = snapshots.join("existing.cornerbits");
         fs::write(&existing, b"preserved backup").unwrap();
-        let mut unsupported = populated_v7();
-        unsupported["schemaVersion"] = serde_json::json!(8);
-        let mut zero = populated_v7();
+        let mut unsupported = populated_v8();
+        unsupported["schemaVersion"] = serde_json::json!(9);
+        let mut zero = populated_v8();
         zero["schemaVersion"] = serde_json::json!(0);
         for original in [
             b"{broken state".to_vec(),
@@ -835,8 +1056,8 @@ mod tests {
     }
 
     #[test]
-    fn v7_requires_strict_keepsakes_and_preserves_their_display_order() {
-        let mut expected = populated_v7();
+    fn v8_requires_strict_keepsakes_and_preserves_their_display_order() {
+        let mut expected = populated_v8();
         let mut caught = vec![0; 36];
         caught[0] = 1;
         caught[1] = 2;
@@ -895,7 +1116,8 @@ mod tests {
         let backup: serde_json::Value = serde_json::from_slice(fixture).unwrap();
         let original = serde_json::to_vec_pretty(&backup["state"]).unwrap();
         let mut expected = backup["state"].clone();
-        expected["schemaVersion"] = serde_json::json!(7);
+        expected["schemaVersion"] = serde_json::json!(8);
+        expected["games"]["coast"] = initial_coast_value();
         let caught = expected["games"]["fishing"]["caught"].as_array().unwrap();
         let keepsakes: Vec<_> = caught
             .iter()
@@ -939,22 +1161,23 @@ mod tests {
     }
 
     #[test]
-    fn v7_requires_the_trade_contract_and_accepts_initial_empty_stock() {
-        let expected = populated_v7();
+    fn v8_requires_the_trade_contract_and_accepts_initial_empty_stock() {
+        let expected = populated_v8();
         let parsed =
             parse_backup(&serde_json::to_vec(&backup_value(expected.clone())).unwrap()).unwrap();
         assert_eq!(serde_json::to_value(parsed.state).unwrap(), expected);
     }
 
     fn add_new_games(value: &mut serde_json::Value) {
-        value["schemaVersion"] = serde_json::json!(7);
-        value["games"]["fishing"] = populated_v7()["games"]["fishing"].clone();
-        value["games"]["sword"] = populated_v7()["games"]["sword"].clone();
+        value["schemaVersion"] = serde_json::json!(8);
+        value["games"]["coast"] = initial_coast_value();
+        value["games"]["fishing"] = populated_v8()["games"]["fishing"].clone();
+        value["games"]["sword"] = populated_v8()["games"]["sword"].clone();
     }
 
     #[test]
-    fn v7_requires_fishing_and_sword_and_accepts_their_initial_contract() {
-        let good = populated_v7();
+    fn v8_requires_fishing_and_sword_and_accepts_their_initial_contract() {
+        let good = populated_v8();
         let parsed =
             parse_backup(&serde_json::to_vec(&backup_value(good.clone())).unwrap()).unwrap();
         assert_eq!(serde_json::to_value(parsed.state).unwrap(), good);
@@ -966,8 +1189,8 @@ mod tests {
     }
 
     #[test]
-    fn v7_sword_polish_cooldown_cannot_exceed_one_interval_from_its_observation() {
-        let good = populated_v7();
+    fn v8_sword_polish_cooldown_cannot_exceed_one_interval_from_its_observation() {
+        let good = populated_v8();
         for (observed, next) in [
             (0_u64, 0_u64),
             (0, 10_000),
@@ -1005,8 +1228,8 @@ mod tests {
     }
 
     #[test]
-    fn v7_roundtrips_a_pending_cast_and_sword_failure_without_advancing_rng() {
-        let mut expected = populated_v7();
+    fn v8_roundtrips_a_pending_cast_and_sword_failure_without_advancing_rng() {
+        let mut expected = populated_v8();
         let fishing = &mut expected["games"]["fishing"];
         fishing["caught"][0] = serde_json::json!(1);
         fishing["totalCaught"] = serde_json::json!(1);
@@ -1042,8 +1265,8 @@ mod tests {
     }
 
     #[test]
-    fn v7_rejects_new_game_ranges_relations_and_malformed_casts_without_overwriting() {
-        let good = populated_v7();
+    fn v8_rejects_new_game_ranges_relations_and_malformed_casts_without_overwriting() {
+        let good = populated_v8();
         let directory = tempdir().unwrap();
         let store = Store::new(directory.path().to_owned());
         let state: AppState = serde_json::from_value(good.clone()).unwrap();
@@ -1160,7 +1383,8 @@ mod tests {
         let fixture = include_bytes!("../../tests/fixtures/phase-five.cornerbits");
         let previous: serde_json::Value = serde_json::from_slice(fixture).unwrap();
         let mut expected = previous["state"].clone();
-        expected["schemaVersion"] = serde_json::json!(7);
+        expected["schemaVersion"] = serde_json::json!(8);
+        expected["games"]["coast"] = initial_coast_value();
         expected["games"]["fishing"]["inventory"] = serde_json::json!(vec![0; 36]);
         expected["games"]["fishing"]["inventoryBonus"] = serde_json::json!(0);
         expected["games"]["fishing"]["baitStock"] = serde_json::json!([0, 0]);
@@ -1200,14 +1424,15 @@ mod tests {
         let fixture = include_bytes!("../../tests/fixtures/phase-six.cornerbits");
         let previous: serde_json::Value = serde_json::from_slice(fixture).unwrap();
         let mut expected = previous.clone();
-        expected["state"]["schemaVersion"] = serde_json::json!(7);
+        expected["state"]["schemaVersion"] = serde_json::json!(8);
+        expected["state"]["games"]["coast"] = initial_coast_value();
         expected["state"]["games"]["fishing"]["keepsakes"] = serde_json::json!([3, 2, 1]);
         let backup = parse_backup(fixture).unwrap();
         assert_eq!(
             serde_json::to_value(&backup.state).unwrap(),
             expected["state"]
         );
-        assert_eq!(backup.state.schema_version, 7);
+        assert_eq!(backup.state.schema_version, 8);
         assert_eq!(backup.state.games.fishing.coins, 238);
         assert_eq!(backup.state.games.fishing.total_caught, 7);
         assert_eq!(backup.state.games.fishing.inventory.iter().sum::<u64>(), 1);
@@ -1240,14 +1465,14 @@ mod tests {
     }
 
     #[test]
-    fn shared_v7_reducer_fixture_roundtrips_keepsakes_gear_and_pending_cast_exactly() {
+    fn shared_v7_fixture_migrates_all_legacy_fields_and_preserves_original_bytes() {
         let fixture = include_bytes!("../../tests/fixtures/phase-seven.cornerbits");
-        let expected: serde_json::Value = serde_json::from_slice(fixture).unwrap();
+        let previous: serde_json::Value = serde_json::from_slice(fixture).unwrap();
+        let mut expected = previous["state"].clone();
+        expected["schemaVersion"] = serde_json::json!(8);
+        expected["games"]["coast"] = initial_coast_value();
         let backup = parse_backup(fixture).unwrap();
-        assert_eq!(
-            serde_json::to_value(&backup.state).unwrap(),
-            expected["state"]
-        );
+        assert_eq!(serde_json::to_value(&backup.state).unwrap(), expected);
         let fishing = &backup.state.games.fishing;
         assert_eq!(fishing.keepsakes, vec![1, 5, 4]);
         assert_eq!(fishing.rod, 2);
@@ -1262,14 +1487,20 @@ mod tests {
         let exports = tempdir().unwrap();
         let store = Store::new(directory.path().to_owned());
         let path = directory.path().join("state.json");
-        let original = serde_json::to_vec_pretty(&expected["state"]).unwrap();
+        let original = serde_json::to_vec_pretty(&previous["state"]).unwrap();
         fs::write(&path, &original).unwrap();
         assert_eq!(store.load().unwrap().unwrap(), backup.state);
-        assert_eq!(fs::read(&path).unwrap(), original);
-        assert!(!directory.path().join("snapshots").exists());
-
+        let migrated = fs::read(&path).unwrap();
+        assert_ne!(migrated, original);
+        let original_snapshot = fs::read_dir(directory.path().join("snapshots"))
+            .unwrap()
+            .next()
+            .unwrap()
+            .unwrap()
+            .path();
+        assert_eq!(fs::read(original_snapshot).unwrap(), original);
         for keepsakes in [serde_json::json!([1, 1]), serde_json::json!([35])] {
-            let mut invalid = expected["state"].clone();
+            let mut invalid = expected.clone();
             invalid["games"]["fishing"]["keepsakes"] = keepsakes;
             assert!(
                 parse_backup(&serde_json::to_vec(&backup_value(invalid.clone())).unwrap()).is_err()
@@ -1278,9 +1509,13 @@ mod tests {
             assert!(store.save_at(&invalid, now(28)).is_err());
             assert!(store.restore_at(&invalid, now(28)).is_err());
         }
-        assert_eq!(fs::read(&path).unwrap(), original);
-        assert!(!directory.path().join("snapshots").exists());
-
+        assert_eq!(fs::read(&path).unwrap(), migrated);
+        assert_eq!(
+            fs::read_dir(directory.path().join("snapshots"))
+                .unwrap()
+                .count(),
+            1
+        );
         let exported = exports.path().join("shared-v7.cornerbits");
         store.export_to(&exported, now(28)).unwrap();
         assert_eq!(
@@ -1291,13 +1526,108 @@ mod tests {
         assert_eq!(store.load().unwrap().unwrap(), backup.state);
         let snapshot = fs::read_dir(directory.path().join("snapshots"))
             .unwrap()
-            .next()
-            .unwrap()
-            .unwrap()
-            .path();
+            .map(|entry| entry.unwrap().path())
+            .find(|path| {
+                path.file_name()
+                    .unwrap()
+                    .to_string_lossy()
+                    .starts_with("pre-restore-")
+            })
+            .unwrap();
         assert_eq!(
             parse_backup(&fs::read(snapshot).unwrap()).unwrap().state,
             backup.state
+        );
+    }
+
+    #[test]
+    fn shared_v8_reducer_fixture_roundtrips_pending_growth_and_all_legacy_games() {
+        let fixture = include_bytes!("../../tests/fixtures/phase-eight.cornerbits");
+        let expected: serde_json::Value = serde_json::from_slice(fixture).unwrap();
+        let legacy: serde_json::Value = serde_json::from_slice(include_bytes!(
+            "../../tests/fixtures/phase-seven.cornerbits"
+        ))
+        .unwrap();
+        let backup = parse_backup(fixture).unwrap();
+        assert_eq!(
+            serde_json::to_value(&backup.state).unwrap(),
+            expected["state"]
+        );
+        for game in ["mine", "garden", "circuit", "fishing", "sword"] {
+            assert_eq!(
+                expected["state"]["games"][game],
+                legacy["state"]["games"][game]
+            );
+        }
+        assert_eq!(
+            expected["state"]["games"]["coast"],
+            serde_json::json!({"activity":"gather","elapsedMs":1800,"catches":17,
+                "totalGathered":22,"fish":2,"wood":1,"coins":85,
+                "decoration":3,"houseLevel":2})
+        );
+        let directory = tempdir().unwrap();
+        let exports = tempdir().unwrap();
+        let store = Store::new(directory.path().to_owned());
+        let path = directory.path().join("state.json");
+        let original = serde_json::to_vec_pretty(&expected["state"]).unwrap();
+        fs::write(&path, &original).unwrap();
+        assert_eq!(store.load().unwrap().unwrap(), backup.state);
+        assert_eq!(fs::read(&path).unwrap(), original);
+        assert!(!directory.path().join("snapshots").exists());
+        let exported = exports.path().join("shared-v8.cornerbits");
+        store.export_to(&exported, now(28)).unwrap();
+        assert_eq!(
+            parse_backup(&fs::read(exported).unwrap()).unwrap().state,
+            backup.state
+        );
+
+        let mut reserved = expected["state"].clone();
+        reserved["games"]["coast"]["activity"] = serde_json::json!("lantern");
+        reserved["games"]["coast"]["decoration"] = serde_json::json!(1);
+        reserved["games"]["coast"]["wood"] = serde_json::json!(0);
+        reserved["games"]["coast"]["coins"] = serde_json::json!(0);
+        let reserved_backup = parse_backup(&serde_json::to_vec(&backup_value(reserved)).unwrap())
+            .expect("pending crafting costs were already reserved before this checkpoint");
+        store.save_at(&reserved_backup.state, now(28)).unwrap();
+        assert_eq!(store.load().unwrap().unwrap(), reserved_backup.state);
+        let current = fs::read(&path).unwrap();
+        for (key, invalid) in [
+            ("elapsedMs", serde_json::json!(4200)),
+            ("decoration", serde_json::json!(7)),
+            ("activity", serde_json::json!("bench")),
+        ] {
+            let mut invalid_state = expected["state"].clone();
+            invalid_state["games"]["coast"][key] = invalid;
+            assert!(parse_backup(
+                &serde_json::to_vec(&backup_value(invalid_state.clone())).unwrap()
+            )
+            .is_err());
+            let invalid: AppState = serde_json::from_value(invalid_state).unwrap();
+            assert!(store.save_at(&invalid, now(28)).is_err());
+            assert!(store.restore_at(&invalid, now(28)).is_err());
+            assert_eq!(fs::read(&path).unwrap(), current);
+            assert_eq!(
+                fs::read_dir(directory.path().join("snapshots"))
+                    .unwrap()
+                    .count(),
+                1
+            );
+        }
+        store.restore_at(&backup.state, now(29)).unwrap();
+        assert_eq!(store.load().unwrap().unwrap(), backup.state);
+        let snapshot = fs::read_dir(directory.path().join("snapshots"))
+            .unwrap()
+            .map(|entry| entry.unwrap().path())
+            .find(|path| {
+                path.file_name()
+                    .unwrap()
+                    .to_string_lossy()
+                    .starts_with("pre-restore-")
+            })
+            .unwrap();
+        assert_eq!(
+            parse_backup(&fs::read(snapshot).unwrap()).unwrap().state,
+            reserved_backup.state
         );
     }
 
@@ -1342,6 +1672,7 @@ mod tests {
             assert_eq!(migrated.games.fishing.unlocked_locations, unlocked);
             let mut preserved = serde_json::to_value(migrated).unwrap();
             preserved["schemaVersion"] = serde_json::json!(5);
+            preserved["games"].as_object_mut().unwrap().remove("coast");
             let fishing = preserved["games"]["fishing"].as_object_mut().unwrap();
             for key in [
                 "inventory",
@@ -1390,8 +1721,8 @@ mod tests {
     }
 
     #[test]
-    fn v7_trade_stock_bonus_and_region_relations_reject_without_overwriting() {
-        let good = populated_v7();
+    fn v8_trade_stock_bonus_and_region_relations_reject_without_overwriting() {
+        let good = populated_v8();
         let directory = tempdir().unwrap();
         let store = Store::new(directory.path().to_owned());
         store
@@ -1448,7 +1779,7 @@ mod tests {
     }
 
     #[test]
-    fn v7_sale_bonus_boundaries_and_large_stock_do_not_overflow() {
+    fn v8_sale_bonus_boundaries_and_large_stock_do_not_overflow() {
         for (species, count, bonus, valid) in [
             (0, 1_u64, 6_u64, true),
             (0, 1, 7, false),
@@ -1458,7 +1789,7 @@ mod tests {
             (35, 1, 57, false),
             (35, 1_000_000_000_000, 1_000_000_000_000, true),
         ] {
-            let mut value = populated_v7();
+            let mut value = populated_v8();
             let fishing = &mut value["games"]["fishing"];
             fishing["caught"][species] = serde_json::json!(count);
             fishing["inventory"][species] = serde_json::json!(count);
@@ -1477,8 +1808,8 @@ mod tests {
     }
 
     #[test]
-    fn v7_roundtrips_unsold_fish_bait_and_permanent_regions_during_a_cast() {
-        let mut expected = populated_v7();
+    fn v8_roundtrips_unsold_fish_bait_and_permanent_regions_during_a_cast() {
+        let mut expected = populated_v8();
         let fishing = &mut expected["games"]["fishing"];
         fishing["rng"] = serde_json::json!(987654321);
         fishing["coins"] = serde_json::json!(300);
@@ -1518,8 +1849,8 @@ mod tests {
     }
 
     #[test]
-    fn v7_requires_permanent_unlock_count_but_preserves_independent_unlock_history() {
-        let good = populated_v7();
+    fn v8_requires_permanent_unlock_count_but_preserves_independent_unlock_history() {
+        let good = populated_v8();
         for count in [1, 40] {
             let mut value = good.clone();
             value["games"]["garden"]["unlockedSpecies"] = serde_json::json!(count);
@@ -1625,7 +1956,7 @@ mod tests {
         let mut expected: serde_json::Value = serde_json::from_slice(fixture).unwrap();
         add_new_games(&mut expected["state"]);
         let backup = parse_backup(fixture).unwrap();
-        assert_eq!(backup.state.schema_version, 7);
+        assert_eq!(backup.state.schema_version, 8);
         assert_eq!(backup.state.games.garden.unlocked_species, 1);
         assert_eq!(
             serde_json::to_value(&backup.state).unwrap(),
@@ -1666,7 +1997,7 @@ mod tests {
         fs::write(&path, &original).unwrap();
         let migrated = store.load().unwrap().unwrap();
         let value = serde_json::to_value(&migrated).unwrap();
-        assert_eq!(value["schemaVersion"], 7);
+        assert_eq!(value["schemaVersion"], 8);
         for key in ["revision", "updatedAt", "settings"] {
             assert_eq!(value[key], legacy[key]);
         }
@@ -1712,11 +2043,11 @@ mod tests {
     }
 
     #[test]
-    fn v7_roundtrips_all_populated_games_through_save_export_and_restore() {
+    fn v8_roundtrips_all_populated_games_through_save_export_and_restore() {
         let directory = tempdir().unwrap();
         let export_directory = tempdir().unwrap();
         let store = Store::new(directory.path().to_owned());
-        let expected = populated_v7();
+        let expected = populated_v8();
         let populated: AppState = serde_json::from_value(expected.clone()).unwrap();
         populated.validate().unwrap();
         store.save_at(&populated, now(28)).unwrap();
@@ -1733,8 +2064,8 @@ mod tests {
     }
 
     #[test]
-    fn v7_validates_circuit_boundaries_and_contiguous_records() {
-        let good = populated_v7();
+    fn v8_validates_circuit_boundaries_and_contiguous_records() {
+        let good = populated_v8();
         let directory = tempdir().unwrap();
         let store = Store::new(directory.path().to_owned());
         let state: AppState = serde_json::from_value(good.clone()).unwrap();
@@ -1817,7 +2148,7 @@ mod tests {
         assert_eq!(read_backup_file(&input).unwrap(), original);
         let populated = parse_backup(original.as_bytes()).unwrap().state;
         let normalized = serde_json::to_value(&populated).unwrap();
-        assert_eq!(normalized["schemaVersion"], 7);
+        assert_eq!(normalized["schemaVersion"], 8);
         assert_eq!(normalized["games"]["mine"], populated_v2()["games"]["mine"]);
         let mut expected_garden = populated_v2()["games"]["garden"].clone();
         expected_garden["unlockedSpecies"] = serde_json::json!(40);
@@ -1847,7 +2178,7 @@ mod tests {
             "turns": 0, "records": vec![0; 300], "totalClears": 0
         });
         let backup = parse_backup(fixture).unwrap();
-        assert_eq!(backup.state.schema_version, 7);
+        assert_eq!(backup.state.schema_version, 8);
         assert_eq!(backup.state.revision, 17);
         assert_eq!(backup.state.games.mine.total_mined, 1);
         assert_eq!(backup.state.games.mine.inventory[0], 1);
@@ -1884,7 +2215,7 @@ mod tests {
         add_new_games(&mut expected["state"]);
         expected["state"]["games"]["garden"]["unlockedSpecies"] = serde_json::json!(1);
         let backup = parse_backup(fixture).unwrap();
-        assert_eq!(backup.state.schema_version, 7);
+        assert_eq!(backup.state.schema_version, 8);
         assert_eq!(backup.state.games.mine.total_mined, 1);
         assert_eq!(backup.state.games.garden.total_harvests, 1);
         assert_eq!(backup.state.games.circuit.stage, 151);
@@ -1920,7 +2251,7 @@ mod tests {
         let path = directory.path().join("state.json");
         fs::write(&path, legacy_bytes()).unwrap();
         let migrated = store.load().unwrap().unwrap();
-        assert_eq!(migrated.schema_version, 7);
+        assert_eq!(migrated.schema_version, 8);
         assert_eq!(migrated.revision, 7);
         assert_eq!(migrated.updated_at, "2026-10-28T01:00:00.000Z");
         assert!(migrated.settings.always_on_top && migrated.settings.compact);
@@ -1988,14 +2319,14 @@ mod tests {
         fs::write(&input, &original).unwrap();
         assert_eq!(read_backup_file(&input).unwrap(), original);
         let normalized = parse_backup(original.as_bytes()).unwrap();
-        assert_eq!(normalized.state.schema_version, 7);
+        assert_eq!(normalized.state.schema_version, 8);
         store.restore_at(&normalized.state, now(28)).unwrap();
         let output = export_directory.path().join("normalized.cornerbits");
         store.export_to(&output, now(28)).unwrap();
         let exported: serde_json::Value =
             serde_json::from_slice(&fs::read(output).unwrap()).unwrap();
         assert_eq!(exported["backupVersion"], 1);
-        assert_eq!(exported["state"]["schemaVersion"], 7);
+        assert_eq!(exported["state"]["schemaVersion"], 8);
         assert_eq!(exported["state"]["games"]["mine"]["depth"], 1);
         assert_eq!(exported["state"]["games"]["circuit"]["stage"], 1);
     }
@@ -2013,7 +2344,7 @@ mod tests {
                 .unwrap()
                 .state
                 .schema_version,
-            7
+            8
         );
         let snapshot = fs::read_dir(directory.path().join("snapshots"))
             .unwrap()
@@ -2028,13 +2359,13 @@ mod tests {
     fn v4_rejects_invalid_game_fields_and_preserves_existing_state() {
         let directory = tempdir().unwrap();
         let store = Store::new(directory.path().to_owned());
-        let good = populated_v7();
+        let good = populated_v8();
         let validated: AppState = serde_json::from_value(good.clone()).unwrap();
         validated.validate().unwrap();
         store.save_at(&validated, now(28)).unwrap();
         let before = fs::read(directory.path().join("state.json")).unwrap();
         let cases = [
-            ("/schemaVersion", serde_json::json!(8)),
+            ("/schemaVersion", serde_json::json!(9)),
             ("/revision", serde_json::json!(9007199254740992_u64)),
             ("/games/mine/depth", serde_json::json!(0)),
             ("/games/mine/depth", serde_json::json!(1000001)),
@@ -2106,6 +2437,7 @@ mod tests {
             populated_v5(),
             populated_v6(),
             populated_v7(),
+            populated_v8(),
         ] {
             let mut pointers = vec![
                 "",
@@ -2120,6 +2452,9 @@ mod tests {
             }
             if good["schemaVersion"].as_u64().unwrap() >= 5 {
                 pointers.extend(["/games/fishing", "/games/sword"]);
+            }
+            if good["schemaVersion"] == 8 {
+                pointers.push("/games/coast");
             }
             for pointer in pointers {
                 let fields: Vec<String> = good
@@ -2169,8 +2504,9 @@ mod tests {
             (5, populated_v5()),
             (6, populated_v6()),
             (7, populated_v7()),
+            (8, populated_v8()),
         ] {
-            for version in [0, 1, 2, 3, 4, 5, 6, 7, 8] {
+            for version in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] {
                 if version == expected_version {
                     continue;
                 }
@@ -2269,7 +2605,7 @@ mod tests {
                 .insert("unexpected".into(), serde_json::json!(true));
             assert!(parse_backup(&serde_json::to_vec(&backup_value(value)).unwrap()).is_err());
         }
-        let mut disguised = populated_v7();
+        let mut disguised = populated_v8();
         disguised["schemaVersion"] = serde_json::json!(1);
         let state: AppState = serde_json::from_value(disguised.clone()).unwrap();
         assert!(state.validate().is_err());
@@ -2278,7 +2614,7 @@ mod tests {
 
     #[test]
     fn v4_accepts_documented_numeric_and_collection_boundaries() {
-        let mut value = populated_v7();
+        let mut value = populated_v8();
         value["revision"] = serde_json::json!(9007199254740991_u64);
         value["games"]["mine"]["depth"] = serde_json::json!(1000000);
         value["games"]["mine"]["pickaxe"] = serde_json::json!(10);
@@ -2314,7 +2650,7 @@ mod tests {
 
     #[test]
     fn v4_rejects_sum_overflow_and_accepts_integral_json_numbers() {
-        let good = populated_v7();
+        let good = populated_v8();
         for game in ["mine", "garden"] {
             let mut value = good.clone();
             let (counts, total) = if game == "mine" {
@@ -2340,9 +2676,9 @@ mod tests {
     #[test]
     fn rejects_future_schema_invalid_timestamp_and_unsafe_revision() {
         let mut value = state(0);
-        value.schema_version = 8;
+        value.schema_version = 9;
         assert!(value.validate().is_err());
-        value.schema_version = 7;
+        value.schema_version = 8;
         value.updated_at = "2026-02-31T12:00:00Z".into();
         assert!(value.validate().is_err());
         value.updated_at = "2026-10-28T01:00:00Z".into();

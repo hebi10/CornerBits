@@ -11,7 +11,7 @@ async function legacy(version: number) {
     schemaVersion: 1, revision: 8, updatedAt: '2026-10-28T01:00:00Z',
     settings: { alwaysOnTop: true, compact: false },
   };
-  const names: Record<number, string> = { 2: 'phase-two', 3: 'phase-three', 4: 'phase-four', 5: 'phase-five', 6: 'phase-six' };
+  const names: Record<number, string> = { 2: 'phase-two', 3: 'phase-three', 4: 'phase-four', 5: 'phase-five', 6: 'phase-six', 7: 'phase-seven' };
   return JSON.parse(await readFile(`tests/fixtures/${names[version]}.cornerbits`, 'utf8')).state;
 }
 
@@ -35,7 +35,9 @@ async function assertNewNavigation(page: Page) {
   }
 }
 
-for (const version of [1, 2, 3, 4, 5, 6]) {
+const newCoast = { activity: null, elapsedMs: 0, catches: 0, totalGathered: 0, fish: 0, wood: 0, coins: 0, decoration: 0, houseLevel: 1 };
+
+for (const version of [1, 2, 3, 4, 5, 6, 7]) {
   test(`v${version} migration preserves its exact source once and shows the three replacement games`, async ({ page }) => {
     const previous = await legacy(version);
     const original = `${JSON.stringify(previous, null, 2)}\n`;
@@ -46,7 +48,7 @@ for (const version of [1, 2, 3, 4, 5, 6]) {
     }, original);
     await page.goto('/');
     const migrated = await saved(page);
-    expect(migrated.schemaVersion).toBe(7);
+    expect(migrated.schemaVersion).toBe(8);
     expect(migrated.revision).toBe(previous.revision);
     expect(migrated.updatedAt).toBe(previous.updatedAt);
     expect(migrated.settings).toEqual(previous.settings);
@@ -62,11 +64,13 @@ for (const version of [1, 2, 3, 4, 5, 6]) {
         expect(migrated.games.fishing.inventory).toEqual(Array(36).fill(0));
         expect(migrated.games.fishing.baitStock).toEqual([0, 0]);
       }
-      expect(migrated.games.fishing.keepsakes).toEqual(previous.games.fishing.caught.flatMap((n:number,i:number)=>n>0?[i]:[]).reverse().slice(0,3));
+      expect(migrated.games.fishing.keepsakes).toEqual(version === 7 ? previous.games.fishing.keepsakes : previous.games.fishing.caught.flatMap((n:number,i:number)=>n>0?[i]:[]).reverse().slice(0,3));
       expect(migrated.games.sword).toEqual(previous.games.sword);
     }
     if(version<5)expect(migrated.games.fishing).toMatchObject({ totalCaught: 0, casts: 0, cast: null });
     expect(migrated.games.sword).toMatchObject({ level: 0, attempts: 0 });
+    expect(migrated.games.coast).toEqual(newCoast);
+    if (version === 7) expect(migrated.games).toEqual({ ...previous.games, coast: newCoast });
     await assertNewNavigation(page);
     await page.reload();
     expect((await saved(page)).games).toEqual(migrated.games);
@@ -105,13 +109,15 @@ for (const version of [1, 2, 3, 4, 5, 6]) {
     await importState(page, previous);
     await expect(page.getByText(version === 1
       ? '1단계 설정 백업입니다. 복원하면 세 게임 진행도가 처음 상태로 바뀝니다.'
-      : version === 6 ? '전시 기능 이전 백업입니다. 기존 기록을 유지하고 수집한 어종으로 전시를 구성합니다.' : version === 5 ? '판매 기능 이전 백업입니다. 기존 코인·도감은 유지하고 판매 재고·미끼 재고는0으로 시작합니다. 이미 정산된 물고기를 다시 지급하지 않습니다.' : '이전 게임 구성의 백업입니다. 정원과 광산·회로 기록은 보존하고, 낚시와 검 키우기는 처음 상태로 복원합니다.')).toBeVisible();
+      : version === 7 ? '해안 생활 이전 백업입니다. 이전 게임 기록을 보존하고, 해안 생활은 처음 상태로 복원합니다.' : version === 6 ? '전시 기능 이전 백업입니다. 기존 기록을 유지하고 수집한 어종으로 전시를 구성합니다.' : version === 5 ? '판매 기능 이전 백업입니다. 기존 코인·도감은 유지하고 판매 재고·미끼 재고는0으로 시작합니다. 이미 정산된 물고기를 다시 지급하지 않습니다.' : '이전 게임 구성의 백업입니다. 정원과 광산·회로 기록은 보존하고, 낚시와 검 키우기는 처음 상태로 복원합니다.')).toBeVisible();
     await page.getByRole('button', { name: '취소', exact: true }).click();
     expect((await saved(page)).games).toEqual(before.games);
     await importState(page, previous);
     await page.getByRole('button', { name: '이 백업으로 복원', exact: true }).click();
     const restored = await saved(page);
-    expect(restored.schemaVersion).toBe(7);
+    expect(restored.schemaVersion).toBe(8);
+    expect(restored.games.coast).toEqual(newCoast);
+    if (version === 7) expect(restored.games).toEqual({ ...previous.games, coast: newCoast });
     expect(restored.games.sword).toMatchObject({ level: 0, ore: 0, totalPolishes: 0 });
     if(version>=5)expect(restored.games.fishing).toMatchObject(previous.games.fishing);
     else expect(restored.games.fishing).toMatchObject({ totalCaught: 0, casts: 0, cast: null });
@@ -140,8 +146,8 @@ test('malformed v5 fishing and sword backups cannot replace the saved progress',
   }
 });
 
-test('current v7 fixture keeps archived mine and circuit records while the replacement games are played', async ({ page }) => {
-  const state = JSON.parse(await readFile('tests/fixtures/phase-seven.cornerbits', 'utf8')).state;
+test('current v8 fixture preserves coastal progress through legacy play, backup and restore', async ({ page }) => {
+  const state = JSON.parse(await readFile('tests/fixtures/phase-eight.cornerbits', 'utf8')).state;
   await page.addInitScript(value => {
     if (localStorage.getItem('cornerbits.preview.state') === null) {
       localStorage.setItem('cornerbits.preview.state', JSON.stringify(value));
@@ -159,8 +165,24 @@ test('current v7 fixture keeps archived mine and circuit records while the repla
   const progressed = await saved(page);
   expect(progressed.games.mine).toEqual(state.games.mine);
   expect(progressed.games.circuit).toEqual(state.games.circuit);
+  expect(progressed.games.coast).toEqual(state.games.coast);
   expect(progressed.games.sword.totalPolishes).toBe(1);
   expect(progressed.games.garden.pots[1]).not.toBeNull();
+  await page.reload();
+  expect((await saved(page)).games).toEqual(progressed.games);
+  await page.getByRole('button', { name: '관리', exact: true }).click();
+  const downloadEvent = page.waitForEvent('download');
+  await page.getByRole('button', { name: '백업 내보내기', exact: true }).click();
+  const download = await downloadEvent;
+  const exported = JSON.parse(await readFile((await download.path())!, 'utf8'));
+  expect(exported.state).toEqual(progressed);
+  await importState(page, state);
+  await expect(page.getByText('해안 생활 이전 백업입니다. 이전 게임 기록을 보존하고, 해안 생활은 처음 상태로 복원합니다.')).toHaveCount(0);
+  await page.getByRole('button', { name: '이 백업으로 복원', exact: true }).click();
+  expect((await saved(page)).games).toEqual(state.games);
+  await importState(page, exported.state);
+  await page.getByRole('button', { name: '이 백업으로 복원', exact: true }).click();
+  expect((await saved(page)).games).toEqual(progressed.games);
   await page.reload();
   expect((await saved(page)).games).toEqual(progressed.games);
   expect(await page.evaluate(() => Object.keys(localStorage)

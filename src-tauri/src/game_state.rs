@@ -632,6 +632,117 @@ impl SwordState {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum CoastAction {
+    Fish,
+    Gather,
+    Flower,
+    Lantern,
+    Bench,
+    Upgrade,
+}
+
+fn deserialize_coast_activity<'de, D>(deserializer: D) -> Result<Option<CoastAction>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    Option::<CoastAction>::deserialize(deserializer)
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CoastState {
+    #[serde(deserialize_with = "deserialize_coast_activity")]
+    pub activity: Option<CoastAction>,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub elapsed_ms: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub catches: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub total_gathered: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub fish: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub wood: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub coins: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub decoration: u64,
+    #[serde(deserialize_with = "deserialize_integer")]
+    pub house_level: u64,
+}
+
+impl Default for CoastState {
+    fn default() -> Self {
+        Self {
+            activity: None,
+            elapsed_ms: 0,
+            catches: 0,
+            total_gathered: 0,
+            fish: 0,
+            wood: 0,
+            coins: 0,
+            decoration: 0,
+            house_level: 1,
+        }
+    }
+}
+
+impl CoastState {
+    fn validate(&self) -> Result<(), String> {
+        if [
+            self.catches,
+            self.total_gathered,
+            self.fish,
+            self.wood,
+            self.coins,
+        ]
+        .iter()
+        .any(|count| *count > MAX_COUNT)
+            || !(1..=3).contains(&self.house_level)
+            || self.decoration > 7
+            || self.fish > self.catches
+            || self.wood > self.total_gathered
+        {
+            return Err("해안 생활 기록이 올바르지 않습니다.".into());
+        }
+        if self.decoration & !((1_u64 << self.house_level) - 1) != 0 {
+            return Err("해안 생활 장식 해금이 올바르지 않습니다.".into());
+        }
+        let Some(activity) = &self.activity else {
+            return if self.elapsed_ms == 0 {
+                Ok(())
+            } else {
+                Err("해안 생활 대기 시간이 올바르지 않습니다.".into())
+            };
+        };
+        let duration = if *activity == CoastAction::Fish {
+            5_200
+        } else {
+            4_200
+        };
+        let can_finish = match activity {
+            CoastAction::Fish => {
+                self.catches <= MAX_COUNT - self.house_level
+                    && self.fish <= MAX_COUNT - self.house_level
+            }
+            CoastAction::Gather => {
+                self.total_gathered <= MAX_COUNT - self.house_level
+                    && self.wood <= MAX_COUNT - self.house_level
+            }
+            CoastAction::Upgrade => self.house_level < 3,
+            CoastAction::Flower => self.decoration & 1 == 0,
+            CoastAction::Lantern => self.house_level >= 2 && self.decoration & 2 == 0,
+            CoastAction::Bench => self.house_level >= 3 && self.decoration & 4 == 0,
+        };
+        if self.elapsed_ms >= duration || !can_finish {
+            return Err("해안 생활 진행 작업이 올바르지 않습니다.".into());
+        }
+        Ok(())
+    }
+}
+
 #[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Games {
@@ -640,6 +751,7 @@ pub struct Games {
     pub circuit: CircuitState,
     pub fishing: FishingState,
     pub sword: SwordState,
+    pub coast: CoastState,
 }
 
 impl Games {
@@ -648,6 +760,7 @@ impl Games {
         self.garden.validate()?;
         self.circuit.validate()?;
         self.fishing.validate()?;
-        self.sword.validate()
+        self.sword.validate()?;
+        self.coast.validate()
     }
 }

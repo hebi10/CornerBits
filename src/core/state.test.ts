@@ -2,10 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { decodeBackup, encodeBackup, initialState, parseState, SaveQueue, type AppState } from './state';
 import { initialCircuit } from '../games/circuit';
+import { advanceCoast, initialCoast, startActivity } from '../coast/model';
 
 const savedState: AppState = {
   ...initialState(),
-  schemaVersion: 7,
+  schemaVersion: 8,
   revision: 12,
   updatedAt: '2026-10-28T02:30:00.000Z',
   settings: { alwaysOnTop: true, compact: false },
@@ -22,7 +23,7 @@ it('roundtrips the shared v7 keepsakes gear and active cast fixture exactly', ()
   const raw=readFileSync('tests/fixtures/phase-seven.cornerbits','utf8');
   const fixture=JSON.parse(raw);
   const state=decodeBackup(raw);
-  expect(state).toEqual(fixture.state);
+  expect(state).toEqual({ ...fixture.state, schemaVersion: 8, games: { ...fixture.state.games, coast: initialCoast() } });
   expect(state.games.fishing).toMatchObject({rod:2,keepsakes:[1,5,4],baitStock:[3,0]});
   expect(decodeBackup(encodeBackup(state))).toEqual(state);
 });
@@ -42,7 +43,7 @@ describe('phase two compatibility', () => {
     const text = readFileSync(new URL('../../tests/fixtures/phase-six.cornerbits', import.meta.url), 'utf8');
     const state = decodeBackup(text);
     const legacy = JSON.parse(text).state;
-    expect(state).toMatchObject({ ...legacy, schemaVersion: 7 });
+    expect(state).toMatchObject({ ...legacy, schemaVersion: 8 });
     expect(state.games.fishing.keepsakes).toEqual(legacy.games.fishing.caught.flatMap((count: number, index: number) => count > 0 ? [index] : []).reverse().slice(0, 3));
     expect(state.games.fishing.inventory.reduce((sum, count) => sum + count, 0)).toBe(1);
     expect(state.games.fishing.baitStock).toEqual([3, 0]);
@@ -79,7 +80,7 @@ describe('phase two compatibility', () => {
   it('adds fishing and sword while preserving all four-version games', () => {
     const old = JSON.parse(readFileSync(new URL('../../tests/fixtures/phase-four.cornerbits', import.meta.url), 'utf8')).state;
     const migrated = parseState(JSON.stringify(old));
-    expect(migrated.schemaVersion).toBe(7);
+    expect(migrated.schemaVersion).toBe(8);
     for (const game of ['mine', 'garden', 'circuit'] as const) expect(migrated.games[game]).toEqual(old.games[game]);
     expect(migrated.games).toHaveProperty('fishing', expect.objectContaining({ casts: 0, totalCaught: 0, cast: null }));
     expect(migrated.games).toHaveProperty('sword', expect.objectContaining({ level: 0, pity: 0, attempts: 0 }));
@@ -101,13 +102,13 @@ describe('phase two compatibility', () => {
   it('migrates the shared v4 fixture without altering its previous games', () => {
     const text = readFileSync(new URL('../../tests/fixtures/phase-four.cornerbits', import.meta.url), 'utf8');
     const state = decodeBackup(text);
-    expect(state).toMatchObject({ ...JSON.parse(text).state, schemaVersion: 7 });
+    expect(state).toMatchObject({ ...JSON.parse(text).state, schemaVersion: 8 });
     expect(decodeBackup(encodeBackup(state))).toEqual(state);
   });
   it('upgrades version two while retaining both games and adding an independent circuit', () => {
     const legacy = JSON.parse(readFileSync(new URL('../../tests/fixtures/phase-two.cornerbits', import.meta.url), 'utf8')).state;
     const upgraded = parseState(JSON.stringify(legacy));
-    expect(upgraded).toMatchObject({ schemaVersion: 7, revision: legacy.revision, updatedAt: legacy.updatedAt, settings: legacy.settings });
+    expect(upgraded).toMatchObject({ schemaVersion: 8, revision: legacy.revision, updatedAt: legacy.updatedAt, settings: legacy.settings });
     expect(upgraded.games.mine).toEqual(legacy.games.mine);
     expect(upgraded.games.garden).toEqual({ ...legacy.games.garden, unlockedSpecies: 1 });
     expect(upgraded.games).toHaveProperty('circuit', expect.objectContaining({ stage: 1, turns: 0, totalClears: 0, records: Array(300).fill(0) }));
@@ -116,18 +117,18 @@ describe('phase two compatibility', () => {
     const text = readFileSync(new URL('../../tests/fixtures/phase-two.cornerbits', import.meta.url), 'utf8');
     const state = decodeBackup(text);
     const original = JSON.parse(text).state;
-    expect(state).toMatchObject({ ...original, schemaVersion: 7, games: { ...original.games, garden: { ...original.games.garden, unlockedSpecies: 1 }, circuit: initialCircuit() } });
+    expect(state).toMatchObject({ ...original, schemaVersion: 8, games: { ...original.games, garden: { ...original.games.garden, unlockedSpecies: 1 }, circuit: initialCircuit() } });
     expect(decodeBackup(encodeBackup(state))).toEqual(state);
   });
   it('migrates legacy settings and backups to independent empty games', () => {
     const legacy = { schemaVersion: 1, revision: 7, updatedAt: '2026-10-28T01:00:00Z', settings: { alwaysOnTop: true, compact: false } };
     const migrated = parseState(JSON.stringify(legacy));
-    expect(migrated).toMatchObject({ schemaVersion: 7, revision: 7, settings: legacy.settings, games: { mine: { depth: 1, totalMined: 0 }, garden: { pots: [null, null, null], totalHarvests: 0, unlockedSpecies: 1 } } });
+    expect(migrated).toMatchObject({ schemaVersion: 8, revision: 7, settings: legacy.settings, games: { mine: { depth: 1, totalMined: 0 }, garden: { pots: [null, null, null], totalHarvests: 0, unlockedSpecies: 1 } } });
     expect(decodeBackup(JSON.stringify({ ...backup, state: legacy }))).toEqual(migrated);
   });
 
   it('creates version four game progress for a new installation', () => {
-    expect(initialState()).toMatchObject({ schemaVersion: 7, games: { mine: { tiles: Array(25).fill(2) }, garden: { harvested: Array(40).fill(0), unlockedSpecies: 1 } } });
+    expect(initialState()).toMatchObject({ schemaVersion: 8, games: { mine: { tiles: Array(25).fill(2) }, garden: { harvested: Array(40).fill(0), unlockedSpecies: 1 } } });
   });
 
   it('captures nested game arrays and planted pots before queued writes', async () => {
@@ -155,7 +156,7 @@ describe('phase two compatibility', () => {
     const text = readFileSync(new URL('../../tests/fixtures/phase-three.cornerbits', import.meta.url), 'utf8');
     const state = decodeBackup(text);
     const legacy = JSON.parse(text).state;
-    expect(state).toMatchObject({ ...legacy, schemaVersion: 7, games: { ...legacy.games, garden: { ...legacy.games.garden, unlockedSpecies: 1 } } });
+    expect(state).toMatchObject({ ...legacy, schemaVersion: 8, games: { ...legacy.games, garden: { ...legacy.games.garden, unlockedSpecies: 1 } } });
     expect(state.games.circuit.rotations).toHaveLength(25);
     expect(decodeBackup(encodeBackup(state))).toEqual(state);
   });
@@ -166,7 +167,7 @@ describe('initialState', () => {
     const before = Date.now();
     const state = initialState();
     expect(state).toEqual({
-      schemaVersion: 7,
+      schemaVersion: 8,
       games: initialState().games,
       revision: 0,
       updatedAt: expect.any(String),
@@ -185,7 +186,7 @@ describe('state validation', () => {
   });
 
   it.each([
-    { label: 'future schema', value: { ...savedState, schemaVersion: 8 } },
+    { label: 'future schema', value: { ...savedState, schemaVersion: 9 } },
     { label: 'string schema', value: { ...savedState, schemaVersion: '1' } },
     { label: 'negative revision', value: { ...savedState, revision: -1 } },
     { label: 'fractional revision', value: { ...savedState, revision: 1.5 } },
@@ -254,7 +255,7 @@ describe('backup format', () => {
   it.each([
     { label: 'another app', value: { ...backup, format: 'OtherApp' } },
     { label: 'future backup version', value: { ...backup, backupVersion: 2 } },
-    { label: 'future state schema', value: { ...backup, state: { ...savedState, schemaVersion: 8 } } },
+    { label: 'future state schema', value: { ...backup, state: { ...savedState, schemaVersion: 9 } } },
     { label: 'invalid export timestamp', value: { ...backup, exportedAt: '2026-02-30T00:00:00Z' } },
     { label: 'missing app identifier', value: { backupVersion: 1, exportedAt: backup.exportedAt, state: savedState } },
     { label: 'unknown backup field', value: { ...backup, extra: true } },
@@ -382,5 +383,29 @@ describe('SaveQueue', () => {
       { status: 'rejected', reason: failure },
       { status: 'rejected', reason: failure },
     ]);
+  });
+});
+
+describe('durable coastal schema',()=>{
+  it('roundtrips the current shared native coastal fixture exactly',()=>{
+    const fixture=JSON.parse(readFileSync('tests/fixtures/phase-eight.cornerbits','utf8'));
+    const state=decodeBackup(JSON.stringify(fixture));
+    expect(state).toEqual(fixture.state);
+    expect(decodeBackup(encodeBackup(state))).toEqual(fixture.state);
+    expect(state.games.coast).toMatchObject({activity:'gather',elapsedMs:1800,houseLevel:2,decoration:3,fish:2,wood:1,coins:85});
+  });
+  it('migrates v7 by adding an empty coast without changing an existing field',()=>{
+    const original=JSON.parse(readFileSync('tests/fixtures/phase-seven.cornerbits','utf8')).state;
+    const migrated=parseState(JSON.stringify(original));expect(migrated.schemaVersion).toBe(8);expect(migrated.games.coast).toEqual(initialCoast());
+    expect({...migrated,schemaVersion:7,games:Object.fromEntries(Object.entries(migrated.games).filter(([name])=>name!=='coast'))}).toEqual(original);
+  });
+  it('keeps pending coastal reserved costs and elapsed time through backup roundtrips',()=>{
+    const state=initialState();const funds={...initialCoast(),wood:3,totalGathered:3,coins:20};state.games.coast=advanceCoast(startActivity(funds,'flower'),1750);
+    const roundtrip=decodeBackup(encodeBackup(state));expect(roundtrip).toEqual(state);expect(roundtrip.games.coast).toMatchObject({wood:0,coins:0,activity:'flower',elapsedMs:1750});
+    expect(advanceCoast(roundtrip.games.coast,2450)).toMatchObject({decoration:1,wood:0,coins:0});
+  });
+  it('rejects mixed coastal shapes instead of dropping a new coast or accepting an old schema',()=>{
+    const state=initialState();const {coast:ignored,...previous}=state.games;void ignored;
+    for(const invalid of [{...state,games:previous},{...state,schemaVersion:7},{...state,games:{...state.games,coast:{...state.games.coast,fish:1}}},{...state,games:{...state.games,coast:{...state.games.coast,elapsedMs:1}}}])expect(()=>parseState(JSON.stringify(invalid))).toThrow();
   });
 });

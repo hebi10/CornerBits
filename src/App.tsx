@@ -30,7 +30,7 @@ export default function App() {
   const [error, setError] = useState('');
   const [note, setNote] = useState('');
   const [pendingBackup, setPendingBackup] = useState<AppState | null>(null);
-  const [backupSchema, setBackupSchema] = useState(7);
+  const [backupSchema, setBackupSchema] = useState(8);
   const [screen, setScreen] = useState<'fishing' | 'garden' | 'sword' | 'manage'>('fishing');
   const [visible, setVisible] = useState(() => !document.hidden);
   const [saveFailed, setSaveFailed] = useState(false);
@@ -280,6 +280,7 @@ export default function App() {
           {backupSchema > 1 && backupSchema < 5 && <p>이전 게임 구성의 백업입니다. 정원과 광산·회로 기록은 보존하고, 낚시와 검 키우기는 처음 상태로 복원합니다.</p>}
           {backupSchema === 5 && <p>판매 기능 이전 백업입니다. 기존 코인·도감은 유지하고 판매 재고·미끼 재고는0으로 시작합니다. 이미 정산된 물고기를 다시 지급하지 않습니다.</p>}
           {backupSchema === 6 && <p>전시 기능 이전 백업입니다. 기존 기록을 유지하고 수집한 어종으로 전시를 구성합니다.</p>}
+          {backupSchema === 7 && <p>해안 생활 이전 백업입니다. 이전 게임 기록을 보존하고, 해안 생활은 처음 상태로 복원합니다.</p>}
           <div className="confirm-actions"><button type="button" className="primary" disabled={busy} onClick={() => void runOperation(confirmRestore)}>이 백업으로 복원</button><button type="button" disabled={busy} onClick={() => setPendingBackup(null)}>취소</button></div>
         </section>}
         </>}

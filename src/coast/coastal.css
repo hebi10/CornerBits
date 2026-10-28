@@ -1,6 +1,8 @@
 .coastal-scene { width: 280px; height: 100%; min-height: 318px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .coastal-canvas { position: relative; width: 280px; height: 280px; flex: none; isolation: isolate; }
 .coast-island { position: absolute; inset: 0; background: url('/art/coast-island.png') center / 100% 100% no-repeat; image-rendering: pixelated; pointer-events: none; }
+.coast-island-2 { background-image: url('/art/coast-island-level2.png'); }
+.coast-island-3 { background-image: url('/art/coast-island-level3.png'); }
 .coast-hotspot { position: absolute; z-index: 4; padding: 0; min-height: 0; border: 0; background: transparent; cursor: pointer; }
 .coast-hotspot:disabled { background: transparent; cursor: default; }
 .coast-hotspot:focus-visible { outline: 2px dashed #efddb2; outline-offset: -3px; }
@@ -9,7 +11,10 @@
 .coast-house { left: 41%; top: 31%; width: 25%; height: 27%; }
 .coast-person { position: absolute; z-index: 3; width: 36px; height: 36px; pointer-events: none; transform: translate(-50%,-82%) scaleX(var(--facing,1)); transform-origin: 50% 82%; }
 .coast-actor { display: block; width: 100%; height: 100%; background-image: url('/art/coast-actor.png'); background-size: 400% 400%; background-repeat: no-repeat; image-rendering: pixelated; }
-.coast-prop { position: absolute; z-index: 2; width: 32px; height: 32px; pointer-events: none; transform: translate(-50%,-82%); background-image: url('/art/coast-props.png'); background-size: 400% 400%; background-repeat: no-repeat; image-rendering: pixelated; }
+.coast-prop { position: absolute; z-index: 2; width: 32px; height: 32px; pointer-events: none; transform: translate(-50%,-82%); }
+.coast-icon { display: block; flex: none; background-image: url('/art/coast-props.png'); background-size: 400% 400%; background-repeat: no-repeat; image-rendering: pixelated; pointer-events: none; }
+.coast-trade, .coast-trade:disabled { position: absolute; z-index: 5; left: 62%; top: 58%; width: 36px; height: 36px; padding: 0; min-height: 0; border: 0; background: transparent; transform: translate(-50%,-82%); cursor: pointer; }
+.coast-trade:disabled { cursor: default; }
 .coast-fish-rack { width: 36px; height: 36px; }
 .coast-wood, .coast-flower { width: 24px; height: 24px; }
 .coast-lantern { width: 18px; height: 18px; }

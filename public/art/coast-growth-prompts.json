@@ -1,0 +1,503 @@
+{
+  "tool": "built-in image_gen",
+  "created_at": "2026-10-28",
+  "transparent_background": true,
+  "source": {
+    "file": "public/art/coast-island.png",
+    "absolute_path": "C:/Users/박도영/Desktop/portfolio/CornerBits/public/art/coast-island.png",
+    "file_sha256": "fd7f16024b1fa6461bd67e58aef3b8485887317bf85ffc8e40d913ff96ee1a49",
+    "decoded_rgba_sha256": "18ebae25773889629d079a35bdafd486b8ba14e618744f12a98b2451bde7d332",
+    "canvas": {
+      "requested": [
+        1254,
+        1254
+      ],
+      "actual": [
+        1254,
+        1254
+      ],
+      "mode": "RGBA",
+      "square": true
+    },
+    "alpha": {
+      "extrema": [
+        0,
+        255
+      ],
+      "fully_transparent_fraction": 0.50107916,
+      "raw_nonzero_bbox": [
+        0,
+        5,
+        1242,
+        1254
+      ],
+      "visible_bbox_threshold_16": [
+        23,
+        168,
+        1232,
+        1146
+      ],
+      "corners_tl_tr_bl_br": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "all_four_corners_zero": true
+    }
+  },
+  "raster_editing": "No manual pixel editing, cropping, resizing, repainting or alpha cleanup. The final generated PNGs were copied unchanged; only exact generation-history prompts were embedded as PNG tEXt metadata by impeccable.cmd. Python/Pillow/NumPy were used only to read and measure image data.",
+  "measurement_notes": [
+    "Alpha extrema and corner values are exact. Visible bounds use alpha >16 to ignore imperceptible generated residue. True RGBA transparency is present; the outer visible shape remains an irregular cutout.",
+    "The first growth edits had imperceptible corner alpha 1..2. A built-in transparency-only edit produced the adopted variants with all four corners alpha exactly 0. The initial generated variants remain only at their default generated-image paths.",
+    "Registration estimates use local grayscale normalized cross correlation over +/-12 source pixels. They are similarity-based measurements, not authored skeleton joints or proof of pixel equality. The repaired door changes appearance, so its template correlation is weaker than the unedited dock/boat.",
+    "The game anchors remain door [0.46,0.46], dockAction [0.20,0.51], sandAction [0.82,0.68]. Measured stair/door differences are under half a display pixel at 280px canvas width and do not require a display offset.",
+    "The generated images preserve the original camera and arrangement visually, but built-in editing regenerates details; scenery is not byte-identical to the source. The final PNG pixel data IS byte-identical to each adopted generated original."
+  ],
+  "display_anchors_fraction": {
+    "cottageDoor": [
+      0.46,
+      0.46
+    ],
+    "dockAction": [
+      0.2,
+      0.51
+    ],
+    "sandAction": [
+      0.82,
+      0.68
+    ]
+  },
+  "assets": [
+    {
+      "name": "islandLevel2",
+      "house_level": 2,
+      "file": "public/art/coast-island-level2.png",
+      "generated_original": "C:/Users/박도영/.codex/generated_images/01a1817f-faef-7822-ba38-de131bb8cef5/exec-55505dbe-12df-498e-9f62-cfdf5ce3b056.png",
+      "generation_history": [
+        {
+          "step": 1,
+          "purpose": "House structural growth edit",
+          "edit_target": "C:/Users/박도영/Desktop/portfolio/CornerBits/public/art/coast-island.png",
+          "generated_output": "C:/Users/박도영/.codex/generated_images/01a1817f-faef-7822-ba38-de131bb8cef5/exec-6a427147-3266-46e3-a4f4-af9f3fd15191.png",
+          "prompt": "Use case: precise-object-edit.\nAsset type: transparent PNG growth-state background for the SAME 280px-wide coastal pixel-art game scene.\nInput image 1 is the EDIT TARGET and authoritative source. This is a precise local edit to its cottage, NOT a reinterpretation or another island.\nCANVAS AND REGISTRATION: Keep the original full 1254 by 1254 square canvas, identical camera angle, object scale, art bounds, framing and transparent gutters. Do not crop, zoom, rotate, recenter, enlarge, resample or rearrange the scene. The cottage entrance and staircase must stay at their ORIGINAL PIXEL LOCATIONS (game door anchor about x=46%, y=46% of the full canvas). The dock action anchor is about x=20%, y=51%; the rowboat, dock posts, beach, rocks, path, both trees, chimney and outer water silhouette must retain their original positions and sizes. Copy all non-house scenery exactly from the input, including the teal water pattern, rocky shore, pale sand and tiny existing white wildflowers.\nStyle: Preserve precisely the reference's restrained colored pixel art, same crisp square pixel clusters, same warm terracotta roof, weathered gray-brown timber, olive/teal foliage, gray stone, beige sand and dark turquoise water. Same warm daytime light and original calm density. No change of palette, season, weather, perspective or art style.\nTRANSPARENCY: Preserve the actual alpha transparency of the original cutout. ALL pixels outside the connected irregular island and immediate water patch must be completely transparent, with alpha exactly zero at all four corners and empty exterior. Do not replace transparency by black, white, checkerboard, gray, sky or a rectangular ocean.\nAVOID: people, animals, fishing rods or lines, chimney smoke, flowerpots, planters, portable lanterns, hanging lamps, benches, fish displays, wood bundles, loose collectibles, flags, large decorations, extra boats, new terrain, UI, text, labels, watermark, frame, panels. The app adds separate placeable flowerpots, lanterns and benches itself: draw NONE of those in the background. Keep original ground wildflowers only.\nPRIMARY CHANGE, HOUSE LEVEL 2 ONLY: Repair the SAME cottage on the SAME footprint, with visibly sturdier brighter natural timber posts and clean warm wood window frames, a neatly repaired but still terracotta tiled roof with finished trim, and a modest solid wooden porch with low simple wooden railings on either side of the ORIGINAL front entrance steps. Keep the front door itself and the original stairs precisely where they are, with a clear open route to the sand path. The repaired timber and porch should be visibly legible at small game size. Keep the house's original overall height, roof ridge, chimney position, main wall silhouette and same windows; no extension, no extra story, no sunroom in level 2. All growth is structural repair, not added ornament. Everything outside this small cottage edit stays identical to the source.",
+          "transparent_background": true
+        },
+        {
+          "step": 2,
+          "purpose": "Transparency-only corner alpha cleanup",
+          "generated_output": "C:/Users/박도영/.codex/generated_images/01a1817f-faef-7822-ba38-de131bb8cef5/exec-55505dbe-12df-498e-9f62-cfdf5ce3b056.png",
+          "prompt": "Use case: background-extraction.\nThe supplied image is the exact final artwork to preserve. Perform ONLY a technical transparent-background cleanup, with no new drawing, redesign, repaint, relighting, scaling, cropping, repositioning, color changes, sharpening or compositional changes. Keep the 1254 x 1254 canvas and the same pixels of the island, cottage, trees, rocks, dock, boat, path, sea and all structural details as exactly as possible. Everything visible must stay at its original coordinates. The door entrance anchor stays at 46% x 46%; no object drift.\nThe existing image is an irregular cutout on true alpha. Some totally empty exterior areas contain imperceptible residual alpha (values 1 or 2 out of 255), including a corner. Fix ONLY that problem: make the empty exterior background COMPLETELY transparent alpha=0, all four corners alpha=0 and all broad empty top/side gutters alpha=0. Export actual transparent RGBA PNG. Do not fill with white, black, gray or checkerboard. Preserve the original pixel-stepped shoreline and every opaque visible detail, including the same natural wood porch and the exact same cottage growth state.\nNo text, labels, watermark, people, smoke, benches, lanterns, flowerpots or new objects. This request is a transparency-only correction of the supplied image, not a request for a different illustration.",
+          "transparent_background": true,
+          "edit_target_at_execution": "C:/Users/박도영/Desktop/portfolio/CornerBits/public/art/coast-island-level2.png",
+          "edit_target_pixel_origin": "C:/Users/박도영/.codex/generated_images/01a1817f-faef-7822-ba38-de131bb8cef5/exec-6a427147-3266-46e3-a4f4-af9f3fd15191.png",
+          "note": "The project output path held the initial growth variant at execution time; it was subsequently replaced by the adopted transparency-edit output."
+        }
+      ],
+      "canvas": {
+        "requested": [
+          1254,
+          1254
+        ],
+        "actual": [
+          1254,
+          1254
+        ],
+        "mode": "RGBA",
+        "square": true
+      },
+      "alpha": {
+        "extrema": [
+          0,
+          255
+        ],
+        "fully_transparent_fraction": 0.49648143,
+        "raw_nonzero_bbox": [
+          0,
+          20,
+          1240,
+          1208
+        ],
+        "visible_bbox_threshold_16": [
+          21,
+          163,
+          1235,
+          1151
+        ],
+        "corners_tl_tr_bl_br": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "all_four_corners_zero": true
+      },
+      "registration_against_level1": {
+        "entranceStair": {
+          "source_template_box": [
+            498,
+            588,
+            555,
+            624
+          ],
+          "estimated_offset_source_px": [
+            1,
+            1
+          ],
+          "normalized_cross_correlation": 0.870995,
+          "estimated_offset_at_280px_canvas": [
+            0.2233,
+            0.2233
+          ],
+          "estimated_offset_canvas_fraction": [
+            0.0007974,
+            0.0007974
+          ]
+        },
+        "doorCore": {
+          "source_template_box": [
+            540,
+            502,
+            565,
+            568
+          ],
+          "estimated_offset_source_px": [
+            1,
+            1
+          ],
+          "normalized_cross_correlation": 0.893099,
+          "estimated_offset_at_280px_canvas": [
+            0.2233,
+            0.2233
+          ],
+          "estimated_offset_canvas_fraction": [
+            0.0007974,
+            0.0007974
+          ]
+        },
+        "boat": {
+          "source_template_box": [
+            255,
+            788,
+            463,
+            869
+          ],
+          "estimated_offset_source_px": [
+            0,
+            1
+          ],
+          "normalized_cross_correlation": 0.9451,
+          "estimated_offset_at_280px_canvas": [
+            0.0,
+            0.2233
+          ],
+          "estimated_offset_canvas_fraction": [
+            0.0,
+            0.0007974
+          ]
+        },
+        "dock": {
+          "source_template_box": [
+            223,
+            633,
+            616,
+            769
+          ],
+          "estimated_offset_source_px": [
+            0,
+            1
+          ],
+          "normalized_cross_correlation": 0.956629,
+          "estimated_offset_at_280px_canvas": [
+            0.0,
+            0.2233
+          ],
+          "estimated_offset_canvas_fraction": [
+            0.0,
+            0.0007974
+          ]
+        },
+        "chimney": {
+          "source_template_box": [
+            636,
+            282,
+            695,
+            338
+          ],
+          "estimated_offset_source_px": [
+            1,
+            0
+          ],
+          "normalized_cross_correlation": 0.891397,
+          "estimated_offset_at_280px_canvas": [
+            0.2233,
+            0.0
+          ],
+          "estimated_offset_canvas_fraction": [
+            0.0007974,
+            0.0
+          ]
+        },
+        "rightShoreRock": {
+          "source_template_box": [
+            1020,
+            683,
+            1117,
+            749
+          ],
+          "estimated_offset_source_px": [
+            1,
+            1
+          ],
+          "normalized_cross_correlation": 0.962992,
+          "estimated_offset_at_280px_canvas": [
+            0.2233,
+            0.2233
+          ],
+          "estimated_offset_canvas_fraction": [
+            0.0007974,
+            0.0007974
+          ]
+        }
+      },
+      "preservation": {
+        "pixel_data_identical_to_adopted_generated_original": true,
+        "decoded_rgba_sha256": "11e4b81674bf754075faadb67e99e18c4212687ea90cc651b84b27f13002ea62",
+        "generated_original_file_sha256": "134abe5f081e0a796f5fbdccec1affaa04bbbb971e8e6c5dc7f60fc9edab99d0",
+        "final_file_sha256": "777342901906cd72a7668cf854a0232a7a7deb6813be88d7bb72a3de74f851c5"
+      },
+      "metadata": {
+        "format": "PNG tEXt",
+        "command": "impeccable.cmd embed-prompt <PNG> --prompt-file <UTF8 exact history txt>",
+        "prompt_file": ".tools/coast-island-level2-history-prompt.txt",
+        "embedded_prompt_exact": "GENERATION HISTORY — exact prompts in execution order\n\nSTEP 1 — precise house growth edit of public/art/coast-island.png\nUse case: precise-object-edit.\nAsset type: transparent PNG growth-state background for the SAME 280px-wide coastal pixel-art game scene.\nInput image 1 is the EDIT TARGET and authoritative source. This is a precise local edit to its cottage, NOT a reinterpretation or another island.\nCANVAS AND REGISTRATION: Keep the original full 1254 by 1254 square canvas, identical camera angle, object scale, art bounds, framing and transparent gutters. Do not crop, zoom, rotate, recenter, enlarge, resample or rearrange the scene. The cottage entrance and staircase must stay at their ORIGINAL PIXEL LOCATIONS (game door anchor about x=46%, y=46% of the full canvas). The dock action anchor is about x=20%, y=51%; the rowboat, dock posts, beach, rocks, path, both trees, chimney and outer water silhouette must retain their original positions and sizes. Copy all non-house scenery exactly from the input, including the teal water pattern, rocky shore, pale sand and tiny existing white wildflowers.\nStyle: Preserve precisely the reference's restrained colored pixel art, same crisp square pixel clusters, same warm terracotta roof, weathered gray-brown timber, olive/teal foliage, gray stone, beige sand and dark turquoise water. Same warm daytime light and original calm density. No change of palette, season, weather, perspective or art style.\nTRANSPARENCY: Preserve the actual alpha transparency of the original cutout. ALL pixels outside the connected irregular island and immediate water patch must be completely transparent, with alpha exactly zero at all four corners and empty exterior. Do not replace transparency by black, white, checkerboard, gray, sky or a rectangular ocean.\nAVOID: people, animals, fishing rods or lines, chimney smoke, flowerpots, planters, portable lanterns, hanging lamps, benches, fish displays, wood bundles, loose collectibles, flags, large decorations, extra boats, new terrain, UI, text, labels, watermark, frame, panels. The app adds separate placeable flowerpots, lanterns and benches itself: draw NONE of those in the background. Keep original ground wildflowers only.\nPRIMARY CHANGE, HOUSE LEVEL 2 ONLY: Repair the SAME cottage on the SAME footprint, with visibly sturdier brighter natural timber posts and clean warm wood window frames, a neatly repaired but still terracotta tiled roof with finished trim, and a modest solid wooden porch with low simple wooden railings on either side of the ORIGINAL front entrance steps. Keep the front door itself and the original stairs precisely where they are, with a clear open route to the sand path. The repaired timber and porch should be visibly legible at small game size. Keep the house's original overall height, roof ridge, chimney position, main wall silhouette and same windows; no extension, no extra story, no sunroom in level 2. All growth is structural repair, not added ornament. Everything outside this small cottage edit stays identical to the source.\n\nSTEP 2 — transparency-only edit of the step 1 output\nUse case: background-extraction.\nThe supplied image is the exact final artwork to preserve. Perform ONLY a technical transparent-background cleanup, with no new drawing, redesign, repaint, relighting, scaling, cropping, repositioning, color changes, sharpening or compositional changes. Keep the 1254 x 1254 canvas and the same pixels of the island, cottage, trees, rocks, dock, boat, path, sea and all structural details as exactly as possible. Everything visible must stay at its original coordinates. The door entrance anchor stays at 46% x 46%; no object drift.\nThe existing image is an irregular cutout on true alpha. Some totally empty exterior areas contain imperceptible residual alpha (values 1 or 2 out of 255), including a corner. Fix ONLY that problem: make the empty exterior background COMPLETELY transparent alpha=0, all four corners alpha=0 and all broad empty top/side gutters alpha=0. Export actual transparent RGBA PNG. Do not fill with white, black, gray or checkerboard. Preserve the original pixel-stepped shoreline and every opaque visible detail, including the same natural wood porch and the exact same cottage growth state.\nNo text, labels, watermark, people, smoke, benches, lanterns, flowerpots or new objects. This request is a transparency-only correction of the supplied image, not a request for a different illustration.\n",
+        "scan_result": "23 rasters, 0 missing",
+        "embedded_prompt_bytes_verified_exact_utf8": true
+      },
+      "visual_review": {
+        "growth_distinct": true,
+        "same_scene_and_camera": true,
+        "no_separate_placeable_decorations": true,
+        "door_and_stairs_accessible": true,
+        "content": "Repaired warm timber window framing, roof and low porch railings.",
+        "registration_assessment": "No material drift at the 280px game width; measured entrance/door registration is under 0.5px in each axis.",
+        "display_offset_required": false
+      }
+    },
+    {
+      "name": "islandLevel3",
+      "house_level": 3,
+      "file": "public/art/coast-island-level3.png",
+      "generated_original": "C:/Users/박도영/.codex/generated_images/01a1817f-faef-7822-ba38-de131bb8cef5/exec-218d5ed2-004e-4bc1-86d7-16aaa462302f.png",
+      "generation_history": [
+        {
+          "step": 1,
+          "purpose": "House structural growth edit",
+          "edit_target": "C:/Users/박도영/Desktop/portfolio/CornerBits/public/art/coast-island.png",
+          "generated_output": "C:/Users/박도영/.codex/generated_images/01a1817f-faef-7822-ba38-de131bb8cef5/exec-b75102dd-ecc0-4ae9-b3b8-b5a2eb52b359.png",
+          "prompt": "Use case: precise-object-edit.\nAsset type: transparent PNG growth-state background for the SAME 280px-wide coastal pixel-art game scene.\nInput image 1 is the EDIT TARGET and authoritative source. This is a precise local edit to its cottage, NOT a reinterpretation or another island.\nCANVAS AND REGISTRATION: Keep the original full 1254 by 1254 square canvas, identical camera angle, object scale, art bounds, framing and transparent gutters. Do not crop, zoom, rotate, recenter, enlarge, resample or rearrange the scene. The cottage entrance and staircase must stay at their ORIGINAL PIXEL LOCATIONS (game door anchor about x=46%, y=46% of the full canvas). The dock action anchor is about x=20%, y=51%; the rowboat, dock posts, beach, rocks, path, both trees, chimney and outer water silhouette must retain their original positions and sizes. Copy all non-house scenery exactly from the input, including the teal water pattern, rocky shore, pale sand and tiny existing white wildflowers.\nStyle: Preserve precisely the reference's restrained colored pixel art, same crisp square pixel clusters, same warm terracotta roof, weathered gray-brown timber, olive/teal foliage, gray stone, beige sand and dark turquoise water. Same warm daytime light and original calm density. No change of palette, season, weather, perspective or art style.\nTRANSPARENCY: Preserve the actual alpha transparency of the original cutout. ALL pixels outside the connected irregular island and immediate water patch must be completely transparent, with alpha exactly zero at all four corners and empty exterior. Do not replace transparency by black, white, checkerboard, gray, sky or a rectangular ocean.\nAVOID: people, animals, fishing rods or lines, chimney smoke, flowerpots, planters, portable lanterns, hanging lamps, benches, fish displays, wood bundles, loose collectibles, flags, large decorations, extra boats, new terrain, UI, text, labels, watermark, frame, panels. The app adds separate placeable flowerpots, lanterns and benches itself: draw NONE of those in the background. Keep original ground wildflowers only.\nPRIMARY CHANGE, HOUSE LEVEL 3: Repair the SAME cottage with visibly sturdier brighter natural timber posts, clean warm wood window frames, a neatly repaired terracotta tiled roof with finished trim, and a finished modest wooden porch with low simple railings around either side of the ORIGINAL front entrance steps. In addition, add ONE small attached glass-and-timber workshop lean-to on the RIGHT SIDE of this SAME house, visible beside the existing right wall in the little gap before the large tree. The workshop is modest, lower than the main eaves, with a shallow roof and a few large muted blue glass panes framed in the same natural wood. It extends a little to the right, and it must remain fully inside the existing grassy plot, leaving the tree trunk, right shore, beach and all original paths at their exact old positions. Keep the same original cottage roof ridge, chimney and front door/stair positions. The house should visibly read as one small step more complete and a little broader than the repaired level-2 cottage, not a replacement mansion. No extra story, no new separate building, no objects inside the workshop that resemble flowerpots/lanterns/benches. All growth is architectural. Everything outside the cottage plus this modest attached extension stays identical to the source.",
+          "transparent_background": true
+        },
+        {
+          "step": 2,
+          "purpose": "Transparency-only corner alpha cleanup",
+          "generated_output": "C:/Users/박도영/.codex/generated_images/01a1817f-faef-7822-ba38-de131bb8cef5/exec-218d5ed2-004e-4bc1-86d7-16aaa462302f.png",
+          "prompt": "Use case: background-extraction.\nThe supplied image is the exact final artwork to preserve. Perform ONLY a technical transparent-background cleanup, with no new drawing, redesign, repaint, relighting, scaling, cropping, repositioning, color changes, sharpening or compositional changes. Keep the 1254 x 1254 canvas and the same pixels of the island, cottage, trees, rocks, dock, boat, path, sea and all structural details as exactly as possible. Everything visible must stay at its original coordinates. The door entrance anchor stays at 46% x 46%; no object drift.\nThe existing image is an irregular cutout on true alpha. Some totally empty exterior areas contain imperceptible residual alpha (values 1 or 2 out of 255), including a corner. Fix ONLY that problem: make the empty exterior background COMPLETELY transparent alpha=0, all four corners alpha=0 and all broad empty top/side gutters alpha=0. Export actual transparent RGBA PNG. Do not fill with white, black, gray or checkerboard. Preserve the original pixel-stepped shoreline and every opaque visible detail, including the same natural wood porch and the exact same cottage growth state.\nNo text, labels, watermark, people, smoke, benches, lanterns, flowerpots or new objects. This request is a transparency-only correction of the supplied image, not a request for a different illustration.",
+          "transparent_background": true,
+          "edit_target_at_execution": "C:/Users/박도영/Desktop/portfolio/CornerBits/public/art/coast-island-level3.png",
+          "edit_target_pixel_origin": "C:/Users/박도영/.codex/generated_images/01a1817f-faef-7822-ba38-de131bb8cef5/exec-b75102dd-ecc0-4ae9-b3b8-b5a2eb52b359.png",
+          "note": "The project output path held the initial growth variant at execution time; it was subsequently replaced by the adopted transparency-edit output."
+        }
+      ],
+      "canvas": {
+        "requested": [
+          1254,
+          1254
+        ],
+        "actual": [
+          1254,
+          1254
+        ],
+        "mode": "RGBA",
+        "square": true
+      },
+      "alpha": {
+        "extrema": [
+          0,
+          255
+        ],
+        "fully_transparent_fraction": 0.49742515,
+        "raw_nonzero_bbox": [
+          15,
+          19,
+          1238,
+          1230
+        ],
+        "visible_bbox_threshold_16": [
+          22,
+          166,
+          1235,
+          1153
+        ],
+        "corners_tl_tr_bl_br": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "all_four_corners_zero": true
+      },
+      "registration_against_level1": {
+        "entranceStair": {
+          "source_template_box": [
+            498,
+            588,
+            555,
+            624
+          ],
+          "estimated_offset_source_px": [
+            1,
+            2
+          ],
+          "normalized_cross_correlation": 0.777491,
+          "estimated_offset_at_280px_canvas": [
+            0.2233,
+            0.4466
+          ],
+          "estimated_offset_canvas_fraction": [
+            0.0007974,
+            0.0015949
+          ]
+        },
+        "doorCore": {
+          "source_template_box": [
+            540,
+            502,
+            565,
+            568
+          ],
+          "estimated_offset_source_px": [
+            -2,
+            -1
+          ],
+          "normalized_cross_correlation": 0.668367,
+          "estimated_offset_at_280px_canvas": [
+            -0.4466,
+            -0.2233
+          ],
+          "estimated_offset_canvas_fraction": [
+            -0.0015949,
+            -0.0007974
+          ]
+        },
+        "boat": {
+          "source_template_box": [
+            255,
+            788,
+            463,
+            869
+          ],
+          "estimated_offset_source_px": [
+            0,
+            1
+          ],
+          "normalized_cross_correlation": 0.926798,
+          "estimated_offset_at_280px_canvas": [
+            0.0,
+            0.2233
+          ],
+          "estimated_offset_canvas_fraction": [
+            0.0,
+            0.0007974
+          ]
+        },
+        "dock": {
+          "source_template_box": [
+            223,
+            633,
+            616,
+            769
+          ],
+          "estimated_offset_source_px": [
+            0,
+            1
+          ],
+          "normalized_cross_correlation": 0.953047,
+          "estimated_offset_at_280px_canvas": [
+            0.0,
+            0.2233
+          ],
+          "estimated_offset_canvas_fraction": [
+            0.0,
+            0.0007974
+          ]
+        },
+        "chimney": {
+          "source_template_box": [
+            636,
+            282,
+            695,
+            338
+          ],
+          "estimated_offset_source_px": [
+            0,
+            0
+          ],
+          "normalized_cross_correlation": 0.898261,
+          "estimated_offset_at_280px_canvas": [
+            0.0,
+            0.0
+          ],
+          "estimated_offset_canvas_fraction": [
+            0.0,
+            0.0
+          ]
+        },
+        "rightShoreRock": {
+          "source_template_box": [
+            1020,
+            683,
+            1117,
+            749
+          ],
+          "estimated_offset_source_px": [
+            1,
+            1
+          ],
+          "normalized_cross_correlation": 0.962716,
+          "estimated_offset_at_280px_canvas": [
+            0.2233,
+            0.2233
+          ],
+          "estimated_offset_canvas_fraction": [
+            0.0007974,
+            0.0007974
+          ]
+        }
+      },
+      "preservation": {
+        "pixel_data_identical_to_adopted_generated_original": true,
+        "decoded_rgba_sha256": "a47b255a3d89177a1b7d7225f97349622ec40e9e29eee947c0508b44ae0fcaf6",
+        "generated_original_file_sha256": "ec9bf2c8be37bdcecf7d936c12c3ad4f17bef8ee849b18caf36ae22e3137312e",
+        "final_file_sha256": "cb8a552ab0a5acf63288303eccad77be3670c572adf66dd84c1da5ff8e33ff14"
+      },
+      "metadata": {
+        "format": "PNG tEXt",
+        "command": "impeccable.cmd embed-prompt <PNG> --prompt-file <UTF8 exact history txt>",
+        "prompt_file": ".tools/coast-island-level3-history-prompt.txt",
+        "embedded_prompt_exact": "GENERATION HISTORY — exact prompts in execution order\n\nSTEP 1 — precise house growth edit of public/art/coast-island.png\nUse case: precise-object-edit.\nAsset type: transparent PNG growth-state background for the SAME 280px-wide coastal pixel-art game scene.\nInput image 1 is the EDIT TARGET and authoritative source. This is a precise local edit to its cottage, NOT a reinterpretation or another island.\nCANVAS AND REGISTRATION: Keep the original full 1254 by 1254 square canvas, identical camera angle, object scale, art bounds, framing and transparent gutters. Do not crop, zoom, rotate, recenter, enlarge, resample or rearrange the scene. The cottage entrance and staircase must stay at their ORIGINAL PIXEL LOCATIONS (game door anchor about x=46%, y=46% of the full canvas). The dock action anchor is about x=20%, y=51%; the rowboat, dock posts, beach, rocks, path, both trees, chimney and outer water silhouette must retain their original positions and sizes. Copy all non-house scenery exactly from the input, including the teal water pattern, rocky shore, pale sand and tiny existing white wildflowers.\nStyle: Preserve precisely the reference's restrained colored pixel art, same crisp square pixel clusters, same warm terracotta roof, weathered gray-brown timber, olive/teal foliage, gray stone, beige sand and dark turquoise water. Same warm daytime light and original calm density. No change of palette, season, weather, perspective or art style.\nTRANSPARENCY: Preserve the actual alpha transparency of the original cutout. ALL pixels outside the connected irregular island and immediate water patch must be completely transparent, with alpha exactly zero at all four corners and empty exterior. Do not replace transparency by black, white, checkerboard, gray, sky or a rectangular ocean.\nAVOID: people, animals, fishing rods or lines, chimney smoke, flowerpots, planters, portable lanterns, hanging lamps, benches, fish displays, wood bundles, loose collectibles, flags, large decorations, extra boats, new terrain, UI, text, labels, watermark, frame, panels. The app adds separate placeable flowerpots, lanterns and benches itself: draw NONE of those in the background. Keep original ground wildflowers only.\nPRIMARY CHANGE, HOUSE LEVEL 3: Repair the SAME cottage with visibly sturdier brighter natural timber posts, clean warm wood window frames, a neatly repaired terracotta tiled roof with finished trim, and a finished modest wooden porch with low simple railings around either side of the ORIGINAL front entrance steps. In addition, add ONE small attached glass-and-timber workshop lean-to on the RIGHT SIDE of this SAME house, visible beside the existing right wall in the little gap before the large tree. The workshop is modest, lower than the main eaves, with a shallow roof and a few large muted blue glass panes framed in the same natural wood. It extends a little to the right, and it must remain fully inside the existing grassy plot, leaving the tree trunk, right shore, beach and all original paths at their exact old positions. Keep the same original cottage roof ridge, chimney and front door/stair positions. The house should visibly read as one small step more complete and a little broader than the repaired level-2 cottage, not a replacement mansion. No extra story, no new separate building, no objects inside the workshop that resemble flowerpots/lanterns/benches. All growth is architectural. Everything outside the cottage plus this modest attached extension stays identical to the source.\n\nSTEP 2 — transparency-only edit of the step 1 output\nUse case: background-extraction.\nThe supplied image is the exact final artwork to preserve. Perform ONLY a technical transparent-background cleanup, with no new drawing, redesign, repaint, relighting, scaling, cropping, repositioning, color changes, sharpening or compositional changes. Keep the 1254 x 1254 canvas and the same pixels of the island, cottage, trees, rocks, dock, boat, path, sea and all structural details as exactly as possible. Everything visible must stay at its original coordinates. The door entrance anchor stays at 46% x 46%; no object drift.\nThe existing image is an irregular cutout on true alpha. Some totally empty exterior areas contain imperceptible residual alpha (values 1 or 2 out of 255), including a corner. Fix ONLY that problem: make the empty exterior background COMPLETELY transparent alpha=0, all four corners alpha=0 and all broad empty top/side gutters alpha=0. Export actual transparent RGBA PNG. Do not fill with white, black, gray or checkerboard. Preserve the original pixel-stepped shoreline and every opaque visible detail, including the same natural wood porch and the exact same cottage growth state.\nNo text, labels, watermark, people, smoke, benches, lanterns, flowerpots or new objects. This request is a transparency-only correction of the supplied image, not a request for a different illustration.\n",
+        "scan_result": "23 rasters, 0 missing",
+        "embedded_prompt_bytes_verified_exact_utf8": true
+      },
+      "visual_review": {
+        "growth_distinct": true,
+        "same_scene_and_camera": true,
+        "no_separate_placeable_decorations": true,
+        "door_and_stairs_accessible": true,
+        "content": "Repaired timber cottage and completed porch plus one modest attached glass-and-timber workshop on the right.",
+        "registration_assessment": "No material drift at the 280px game width; measured entrance/door registration is under 0.5px in each axis.",
+        "display_offset_required": false
+      }
+    }
+  ]
+}

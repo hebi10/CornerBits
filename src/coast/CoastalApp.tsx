@@ -1,136 +1,96 @@
-import { useEffect, useRef, useState } from 'react';
-import { listen, type UnlistenFn } from '@tauri-apps/api/event';
-import { getCurrentWindow } from '@tauri-apps/api/window';
+import {useCallback,useEffect,useRef,useState} from 'react';
+import {listen,type UnlistenFn} from '@tauri-apps/api/event';
+import {getCurrentWindow} from '@tauri-apps/api/window';
 import * as platform from '../platform';
+import {decodeBackup} from '../core/state';
+import {useCoastalSession} from './useCoastalSession';
 import CoastalScene from './CoastalScene';
+import HousePanel from './HousePanel';
+import RecordPanel,{type PendingCoastBackup} from './RecordPanel';
+import type {CoastalAction} from './model';
 import './coastal-shell.css';
+const message=(cause:unknown)=>cause instanceof Error?cause.message:String(cause);
 
-const message = (cause: unknown) => cause instanceof Error ? cause.message : String(cause);
+export default function CoastalApp(){
+ const {view,session}=useCoastalSession();
+ const advance=useCallback((deltaMs:number)=>session.advance(deltaMs),[session]);
+ const [compact,setCompact]=useState(false),[paused,setPaused]=useState(false),[hidden,setHidden]=useState(()=>document.hidden);
+ const [houseOpen,setHouseOpen]=useState(false),[recordOpen,setRecordOpen]=useState(false),[resizing,setResizing]=useState(platform.desktop),[closing,setClosing]=useState(false);
+ const [windowError,setWindowError]=useState('');
+ const [pending,setPending]=useState<PendingCoastBackup|null>(null);
+ const input=useRef<HTMLInputElement>(null),active=useRef(true),closingRef=useRef(false),resizingRef=useRef(platform.desktop);
+ const pendingResize=useRef<Promise<void>>(Promise.resolve());
+ const error=[view.error,windowError].filter(Boolean).join(' ');
+ const blocked=!view.ready||!view.coast||view.busy||view.saveFailed||resizing||closing;
+ const scenePaused=paused||hidden||compact||houseOpen||recordOpen||blocked;
 
-export default function CoastalApp() {
-  const [compact, setCompact] = useState(false);
-  const [paused, setPaused] = useState(false);
-  const [hidden, setHidden] = useState(() => document.hidden);
-  const [infoOpen, setInfoOpen] = useState(false);
-  const [busy, setBusy] = useState(platform.desktop);
-  const [readError, setReadError] = useState('');
-  const [windowError, setWindowError] = useState('');
-  const active = useRef(true);
-  const changing = useRef(platform.desktop);
-  const closing = useRef(false);
-  const pendingResize = useRef<Promise<void>>(Promise.resolve());
-  const error = [readError, windowError].filter(Boolean).join(' ');
-
-  async function requestExit(fromTray = false) {
-    if (!platform.desktop || closing.current) return;
-    closing.current = true;
-    if (active.current) setBusy(true);
-    try {
-      await pendingResize.current.catch(() => undefined);
-      if (fromTray) await getCurrentWindow().destroy();
-      else await platform.closeWindow();
-    } catch (cause) {
-      closing.current = false;
-      if (active.current) {
-        setWindowError(`창을 닫지 못했습니다. ${message(cause)}`);
-        setBusy(false);
-      }
-    }
+ async function requestExit(){
+  if(!platform.desktop||closingRef.current)return;
+  closingRef.current=true;setClosing(true);
+  try{await pendingResize.current.catch(()=>undefined);if(!await session.prepareClose())return;await getCurrentWindow().destroy();}
+  catch(cause){session.cancelClose();if(active.current)setWindowError(`창을 닫지 못했습니다. ${message(cause)}`);}
+  finally{if(active.current){closingRef.current=false;setClosing(false);}}
+ }
+ useEffect(()=>{
+  active.current=true;let cancelled=false;const stops:UnlistenFn[]=[];
+  const visibility=()=>{setHidden(document.hidden);if(document.hidden)void session.checkpoint();};
+  document.addEventListener('visibilitychange',visibility);
+  async function start(){
+   if(!platform.desktop)return;
+   try{
+    const close=await getCurrentWindow().onCloseRequested(event=>{event.preventDefault();void requestExit();});if(cancelled){close();return;}stops.push(close);
+    const exit=await listen('request-exit',()=>void requestExit());if(cancelled){exit();return;}stops.push(exit);
+    const nativeError=await listen<string>('native-error',event=>{if(!cancelled)setWindowError(event.payload);});if(cancelled){nativeError();return;}stops.push(nativeError);
+    if(closingRef.current)return;await platform.applyWindow({alwaysOnTop:false,compact:false});
+   }catch(cause){if(!cancelled)setWindowError(`화면을 준비하지 못했습니다. ${message(cause)}`);}
+   finally{resizingRef.current=false;if(!cancelled)setResizing(false);}
   }
+  pendingResize.current=start();
+  return()=>{cancelled=true;active.current=false;document.removeEventListener('visibilitychange',visibility);stops.forEach(stop=>stop());};
+ },[session]);
 
-  useEffect(() => {
-    active.current = true;
-    let cancelled = false;
-    const unlisteners: UnlistenFn[] = [];
-    const visibility = () => setHidden(document.hidden);
-    document.addEventListener('visibilitychange', visibility);
-
-    async function subscribe<T>(event: string, handler: (payload: T) => void) {
-      const stop = await listen<T>(event, ({ payload }) => handler(payload));
-      if (cancelled) stop();
-      else unlisteners.push(stop);
-    }
-
-    async function start() {
-      if (!platform.desktop) return;
-      try {
-        await subscribe('request-exit', () => { void requestExit(true); });
-        await subscribe<string>('native-error', (payload) => {
-          if (!cancelled) setWindowError(payload);
-        });
-        if (cancelled || closing.current) return;
-        try {
-          const stored = await platform.inspectState();
-          if (!cancelled) setCompact(stored?.settings.compact ?? false);
-        } catch (cause) {
-          if (!cancelled) setReadError(`기존 기록을 읽지 못했습니다. 원본은 보존했습니다. ${message(cause)}`);
-        }
-        if (cancelled || closing.current) return;
-        await platform.applyWindow({ alwaysOnTop: false, compact: false });
-        if (!cancelled && !closing.current) setCompact(false);
-      } catch (cause) {
-        if (!cancelled) setWindowError(`화면을 준비하지 못했습니다. ${message(cause)}`);
-      } finally {
-        changing.current = false;
-        if (!cancelled && !closing.current) setBusy(false);
-      }
-    }
-
-    pendingResize.current = start();
-    return () => {
-      cancelled = true;
-      active.current = false;
-      document.removeEventListener('visibilitychange', visibility);
-      unlisteners.forEach(stop => stop());
-    };
-  }, []);
-
-  async function resize(nextCompact: boolean) {
-    if (changing.current || closing.current) return false;
-    changing.current = true;
-    setBusy(true);
-    setWindowError('');
-    const operation = platform.applyWindow({ alwaysOnTop: false, compact: nextCompact });
-    pendingResize.current = operation;
-    try {
-      await operation;
-      if (active.current && !closing.current) setCompact(nextCompact);
-      return true;
-    } catch (cause) {
-      if (active.current) setWindowError(`화면 크기를 바꾸지 못했습니다. ${message(cause)}`);
-      return false;
-    } finally {
-      changing.current = false;
-      if (active.current && !closing.current) setBusy(false);
-    }
-  }
-
-  async function showInfo() {
-    if (compact && !await resize(false)) return;
-    if (active.current) setInfoOpen(value => !value);
-  }
-
-  const scenePaused = paused || hidden || compact || infoOpen || busy;
-  return <div className={`coast-shell${compact ? ' coast-compact' : ''}`} data-paused={scenePaused}>
-    <header className="coast-titlebar">
-      <span className="coast-drag-handle" data-tauri-drag-region title="위쪽 여백을 끌어 위치를 옮기세요">
-        <span data-tauri-drag-region>해안 생활</span>
-      </span>
-      <div className="coast-window-controls">
-        <button type="button" aria-label={paused ? '움직임 재생' : '움직임 정지'} title={paused ? '움직임 재생' : '움직임 정지'} aria-pressed={paused} onClick={() => setPaused(value => !value)}>{paused ? '재생' : '정지'}</button>
-        <button type="button" aria-label={compact && error ? '오류 확인하고 펼치기' : '화면 안내'} title={compact && error ? error : '화면 체험 안내'} aria-expanded={infoOpen && !compact} disabled={busy} onClick={() => void showInfo()}>{compact && error ? '오류' : '안내'}</button>
-        <button type="button" aria-label={compact ? '펼치기' : '막대로 축소'} title={compact ? '펼치기' : '막대로 축소'} disabled={busy} onClick={() => void resize(!compact)}>{compact ? '펼침' : '접기'}</button>
-        {platform.desktop && <button type="button" aria-label="종료" title="종료" disabled={busy} onClick={() => void requestExit()}>닫기</button>}
-      </div>
-    </header>
-    <main className="coast-scene-area" hidden={compact}>
-      <CoastalScene paused={scenePaused}/>
-    </main>
-    {!compact && error && <p className="coast-shell-error" role="alert">{error}</p>}
-    {!compact && infoOpen && <section className="coast-screen-info" aria-label="화면 체험 안내">
-      <p>화면 체험판 · 부두에서 낚시, 해변에서 나무를 주워 집을 꾸며 보세요.</p>
-      <p>이번 행동은 닫으면 초기화되며 기존 게임 기록은 바꾸지 않습니다.</p>
-      <p>위쪽 여백을 끌어 위치를 옮깁니다. ‘정지’로 움직임을 잠시 멈출 수 있습니다.</p>
-    </section>}
-  </div>;
+ async function resize(next:boolean){
+  if(resizingRef.current||closingRef.current)return false;
+  resizingRef.current=true;setResizing(true);setWindowError('');
+  const operation=(async()=>{if(!await session.checkpoint())throw new Error('먼저 저장을 다시 시도해 주세요.');await platform.applyWindow({alwaysOnTop:false,compact:next});if(active.current)setCompact(next);})();
+  pendingResize.current=operation;
+  try{await operation;return true;}catch(cause){if(active.current)setWindowError(`크기를 바꾸지 못했습니다. ${message(cause)}`);return false;}
+  finally{resizingRef.current=false;if(active.current)setResizing(false);}
+ }
+ async function togglePause(){const next=!paused;setPaused(next);if(next)await session.checkpoint();}
+ async function openHouse(){if(!view.coast||view.busy)return;setHouseOpen(true);setRecordOpen(false);await session.checkpoint();}
+ async function toggleRecords(){if(compact&&!await resize(false))return;setHouseOpen(false);setRecordOpen(!recordOpen);if(!recordOpen)await session.checkpoint();}
+ function startProject(action:CoastalAction){if(paused||hidden||compact||blocked)return;setHouseOpen(false);void session.start(action);}
+ function sell(){if(paused||hidden||compact||blocked)return;void session.sell();}
+ function preview(text:string){
+  try{const state=decodeBackup(text);const source=JSON.parse(text);setPending({state,sourceVersion:source.state.schemaVersion});session.setError('');}
+  catch(cause){setPending(null);session.setError(`백업을 읽지 못했습니다. ${message(cause)}`);}
+ }
+ async function importBackup(){
+  if(!await session.checkpoint()&&!view.saveFailed&&view.state)return;
+  if(platform.desktop){try{const raw=await platform.readNativeBackup();if(raw!==null)preview(raw);}catch(cause){session.setError(`백업을 읽지 못했습니다. ${message(cause)}`);}}
+  else input.current?.click();
+ }
+ async function restore(){if(!pending)return;if(await session.restore(pending.state)){setPending(null);setWindowError('');}}
+ const uiBusy=view.busy||resizing||closing;
+ return <div className={`coast-shell${compact?' coast-compact':''}`} data-paused={scenePaused}>
+  <header className="coast-titlebar">
+   <span className="coast-drag-handle" data-tauri-drag-region title="위쪽 여백을 끌어 이동"><span data-tauri-drag-region>해안 생활</span></span>
+   <span className={`coast-save-state${view.saveStatus==='저장 완료'?' coast-save-quiet':''}`} role="status" title={view.saveStatus}>{view.saveStatus}</span>
+   <div className="coast-window-controls">
+    <button type="button" aria-label={paused?'움직임 재생':'움직임 정지'} aria-pressed={paused} disabled={!view.ready||uiBusy} onClick={()=>void togglePause()}>{paused?'재생':'정지'}</button>
+    <button type="button" aria-label="기록과 백업" aria-expanded={recordOpen&&!compact} disabled={uiBusy} onClick={()=>void toggleRecords()}>기록</button>
+    <button type="button" aria-label={compact?'펼치기':'막대로 축소'} disabled={!view.ready||uiBusy} onClick={()=>void resize(!compact)}>{compact?'펼침':'접기'}</button>
+    {platform.desktop&&<button type="button" aria-label="종료" disabled={resizing||closing} onClick={()=>void platform.closeWindow().catch(cause=>setWindowError(message(cause)))}>닫기</button>}
+   </div>
+  </header>
+  <main className="coast-scene-area" hidden={compact}>
+   {view.coast?<CoastalScene state={view.coast} paused={scenePaused} disabled={blocked} notice={view.notice} onAction={startProject} onAdvance={advance} onHouse={()=>void openHouse()} onSell={sell}/>:<div className="coast-waiting">{view.ready?'기록을 확인해 주세요':'해안을 불러오는 중'}</div>}
+  </main>
+  {!compact&&!recordOpen&&error&&<div className="coast-shell-error" role="alert">{error}{view.saveFailed&&<button type="button" disabled={uiBusy} onClick={()=>void session.retry()}>저장 다시 시도</button>}</div>}
+  {compact&&error&&<button type="button" className="coast-compact-error" aria-label="저장 오류 확인하고 펼치기" onClick={()=>void toggleRecords()}>저장 확인</button>}
+  {!compact&&houseOpen&&view.coast&&<HousePanel state={view.coast} disabled={blocked||paused||view.coast.activity!==null} onProject={startProject} onSell={sell} onClose={()=>setHouseOpen(false)}/>}
+  {!compact&&recordOpen&&<RecordPanel state={view.state} busy={uiBusy} saveFailed={view.saveFailed} saveStatus={view.saveStatus} error={error} pending={pending} onExport={()=>void session.exportBackup()} onImport={()=>void importBackup()} onRestore={()=>void restore()} onCancel={()=>setPending(null)} onRetry={()=>void session.retry()} onClose={()=>{setPending(null);setRecordOpen(false);}}/>}
+  <input type="file" ref={input} className="coast-sr-only" tabIndex={-1} aria-label="백업 파일 선택" accept=".cornerbits,application/json" onChange={event=>{const file=event.target.files?.[0];event.target.value='';if(!file)return;if(file.size>2*1024*1024){session.setError('백업 파일은 2 MiB 이하여야 합니다.');return;}void file.text().then(preview).catch(cause=>session.setError(message(cause)));}}/>
+ </div>;
 }
